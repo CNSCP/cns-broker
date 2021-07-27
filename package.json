@@ -1,0 +1,21 @@
+{
+  "name": "cns-broker",
+  "version": "0.1.4",
+  "description": "CNS Broker",
+  "author": "Padi, Inc",
+  "license": "ISC",
+  "main": "index.js",
+  "scripts": {
+    "production": "node index --production",
+    "staging": "node index --staging",
+    "start": "node index --staging --verbose --host 0.0.0.0 --port 4040",
+    "stop": "killall node"
+  },
+  "dependencies": {
+    "aedes": "^0.46.0",
+    "aedes-server-factory": "^0.2.1",
+    "colors": "^1.4.0",
+    "compression": "^1.7.4",
+    "express": "^4.17.1"
+  }
+}

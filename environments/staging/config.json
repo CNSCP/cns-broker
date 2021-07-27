@@ -1,0 +1,9 @@
+{
+	"environment": "staging",
+	"profiles": {
+		"domain": "cp.staging.padi.io"
+	},
+	"server": {
+		"public": "environments/staging/public,public"
+	}
+}
