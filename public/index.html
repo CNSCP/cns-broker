@@ -5,30 +5,30 @@
 
 <html lang="en">
 <head>
-	<meta name="description" content="CNS Broker">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CNS Broker">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-	<link rel="stylesheet" href="/main.css">
+  <link rel="stylesheet" href="/main.css">
 
-	<script src="/config.js"></script>
-	<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="/config.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
-	<title>CNS Broker</title>
+  <title>CNS Broker</title>
 </head>
 
 <body>
-	<!-- View navigation -->
-	<nav>
-  	<h1>CNS Broker</h1>
-		<a href="#status">Status</a>
-		<a href="#nodes">Nodes</a>
-		<a href="#log">Log</a>
-		<a href="#settings">Settings</a>
-		<a href="#help">Help</a>
-	</nav>
+  <!-- View navigation -->
+  <nav>
+    <h1>CNS Broker</h1>
+    <a ripple href="#status">Status</a>
+    <a ripple href="#nodes">Nodes</a>
+    <a ripple href="#log">Log</a>
+    <a ripple href="#settings">Settings</a>
+    <a ripple href="#help">Help</a>
+  </nav>
 
-	<!-- Status view -->
-	<section hidden name="status">
+  <!-- Status view -->
+  <section hidden name="status">
     <table>
       <tr><th>Version</th><td id="version"></td></tr>
       <tr><th>Environment</th><td id="environment"></td></tr>
@@ -36,64 +36,62 @@
       <tr><th>Used</th><td id="used"></td></tr>
       <tr><th>Status</th><td id="status"></td></tr>
     </table>
-	</section>
+  </section>
 
-	<!-- Nodes view -->
-	<section hidden name="nodes">
-		<center id="offline"><div>
-			<mark primary><span>Client disconnected</span></mark>
-		</div></center>
+  <!-- Nodes view -->
+  <section hidden name="nodes">
+    <center id="offline"><div>
+      <mark primary><span>Client disconnected</span></mark>
+    </div></center>
 
-		<table hidden id="content" columns="6">
-		<tr>
-			<th>Context</th>
-			<th>Nodes</th>
-			<th>Properties</th>
-			<th>Profiles</th>
-			<th id="heading1">Server</th>
-			<th>Connections</th>
-			<th id="heading2">Client</th>
-		</tr>
-		<tr>
-			<td><ol id="contexts"></ol></td>
-			<td><ol id="nodes"></ol></td>
-			<td><ul id="properties"></ul></td>
-			<td><ol id="profiles"></ol></td>
-			<td><ul id="properties1"></ul></td>
-			<td><ol id="connections"></ol></td>
-			<td><ul id="properties2"></ul></td>
-		</tr>
-		</table>
-	</section>
+    <table hidden grid id="online">
+    <tr>
+      <th>Context</th>
+      <th>Nodes</th>
+      <th>Properties</th>
+      <th>Profiles</th>
+      <th id="heading1">Server</th>
+      <th>Connections</th>
+      <th id="heading2">Client</th>
+    </tr>
+    <tr>
+      <td><ol id="contexts"></ol></td>
+      <td><ol id="nodes"></ol></td>
+      <td><ul id="properties0"></ul></td>
+      <td><ol id="profiles"></ol></td>
+      <td><ul id="properties1"></ul></td>
+      <td><ol id="connections"></ol></td>
+      <td><ul id="properties2"></ul></td>
+    </tr>
+    </table>
+  </section>
 
-	<!-- Log view -->
-	<section hidden name="log">
-		<pre id="logs"></pre>
-	</section>
+  <!-- Log view -->
+  <section hidden name="log">
+    <pre id="logs"></pre>
+  </section>
 
-	<!-- Settings view -->
-	<section hidden name="settings">
-		<h2>Settings</h2>
+  <!-- Settings view -->
+  <section hidden name="settings">
+    <h2>Settings</h2>
+    <button raised id="connect" style="margin-right: 10px">Connect</button>
+    <button raised id="disconnect">Disconnect</button>
+  </section>
 
-		<button id="connect" raised>Connect</button><span>&nbsp;</span>
-		<button id="disconnect" raised>Disconnect</button>
+  <!-- Help view -->
+  <section hidden name="help">
+    <h2>Help</h2>
+  </section>
 
-	</section>
-
-	<!-- Help view -->
-	<section hidden name="help">
-		<h2>Help</h2>
-	</section>
-
-	<!-- Error view -->
-	<section hidden name="error">
-		<p>Most likely causes:</p>
+  <!-- Error view -->
+  <section hidden name="error">
+    <p>Most likely causes:</p>
     <ul>
-			<li>There might be a typing error in the page's URL</li>
-    	<li>The page may have been removed or had its URL changed</li>
-    	<li>The page may be temporarily offline</li>
-		</ul>
-	</section>
+      <li>There might be a typing error in the page's URL</li>
+      <li>The page may have been removed or had its URL changed</li>
+      <li>The page may be temporarily offline</li>
+    </ul>
+  </section>
 
 </body>
 </html>
@@ -101,12 +99,12 @@
 <script>
 (function() {
 
-// Constants
+// Errors
 
 const E_NOCONFIG = 'Not configured';
 const E_NOTFOUND = 'Not found';
 
-//
+// Strings
 
 const S_TITLE = 'CNS Broker';
 
@@ -122,493 +120,509 @@ var selection;
 
 // Main entry point
 function main() {
-	// Config loaded?
-	if (config === undefined) {
-		error(E_NOCONFIG);
-		return;
-	}
+  // Config loaded?
+  if (config === undefined) {
+    error(E_NOCONFIG);
+    return;
+  }
 
-	// Connect to broker
-	connect();
+  // Connect to broker
+  connect();
 
-	// Update views
-	status();
-	nodes();
-	settings();
+  // Update views
+  status();
+  nodes();
+  settings();
 
-	view();
+  view();
 
-	// Url hash change hook
-	listen(window, 'hashchange', view);
+  // Url hash change hook
+  listen(window, 'hashchange', view);
 }
 
 // Connect to broker
 function connect() {
-	// Already connected?
-	if (client !== undefined) return;
+  // Already connected?
+  if (client !== undefined) return;
 
-	log('connecting...');
+  log('connecting...');
 
-	client = mqtt.connect(config)
-	// Connection established
-	.on('connect', () => {
-		log('<> message connect');
-		topics = {};
-		update();
-	})
-	// Topic changed
-	.on('message', (topic, message) => {
-		log('>> message pub ' + topic);
-		topics[topic] = parse(message);
-		update();
-	})
-	// Server broke connection
-	.on('disconnect', () => {
-		log('>< message disconnect');
-	})
-	// Server went offline
-	.on('offline', () => {
-		log('>< message offline');
-	})
-	// Client trying to reconnect
-	.on('reconnect', () => {
-		log('<< message reconnect');
-	})
-	// Client closed
-	.on('close', () => {
-		if (!client.connected) {
-			log('>< message close');
-			update();
-		}
-	})
-	// Client terminated
-	.on('end', () => {
-		log('>< message end');
-		client = undefined;
-	})
-	// Failure
-	.on('error', (error) => {
-		log('error ' + error.message);
-	});
+  client = mqtt.connect(config)
+  // Connection established
+  .on('connect', () => {
+    log('<> messages connect');
+    topics = {};
+    update();
+  })
+  // Topic changed
+  .on('message', (topic, message) => {
+    log('>> messages pub ' + topic);
+    // Set or remove?
+    if (message.length === 0)
+      delete topics[topic];
+    else topics[topic] = parse(message);
 
-	// Subscribe all topics
-	subscribe('#');
+    update();
+  })
+  // Server broke connection
+  .on('disconnect', () => {
+    log('>< messages disconnect');
+  })
+  // Server went offline
+  .on('offline', () => {
+    log('>< messages offline');
+  })
+  // Client trying to reconnect
+  .on('reconnect', () => {
+    log('<< messages reconnect');
+  })
+  // Client closed
+  .on('close', () => {
+    log('>< messages close');
+    update();
+  })
+  // Client terminated
+  .on('end', () => {
+    log('>< messages end');
+    client = undefined;
+  })
+  // Failure
+  .on('error', (error) => {
+    log('client error: ' + error.message);
+  });
+
+  // Subscribe all topics
+  subscribe('#');
 }
 
 // Subscribe to topic
 function subscribe(topic) {
-	log('<< message sub ' + topic);
-  client.subscribe(topic, {rap: true, rh: true});
+  log('<< messages sub ' + topic);
+
+  client.subscribe(topic, {
+    rap: true,
+    rh: true
+  });
 }
 
 // Disconnect from broker
 function disconnect() {
-	// Not connected?
-	if (client === undefined) return;
+  // Not connected?
+  if (client === undefined) return;
 
-	log('disconnecting...');
-	client.end();
+  log('disconnecting...');
+  client.end();
 }
 
 // Show selected view
 function view() {
-	// Hide all sections
-	$$('nav a').forEach((e) => attribute(e, 'selected', null));
-	$$('section').forEach((e) => hide(e));
+  // Deselect nav
+  $$('nav a').forEach((e) => attribute(e, 'selected', null));
 
-	// Get view from hash
-	const hash = window.location.hash || '#status';
-	const name = hash.slice(1);
+  // Get view from hash
+  const hash = window.location.hash || '#status';
+  const name = hash.slice(1);
 
-	// Valid section?
-	const section = $('section[name="' + name + '"]');
+  // Valid section?
+  if ($('section[name="' + name + '"]') === null) {
+    error(E_NOTFOUND);
+    return;
+  }
 
-	if (section === null) {
-		error(E_NOTFOUND);
-		return;
-	}
+  // Select nav
+  $$('nav a[href="' + hash + '"]').forEach((e) => attribute(e, 'selected', ''));
+  text('nav h1', S_TITLE);
 
-	// Show current section
-	$$('nav a[href="' + hash + '"]').forEach((e) => attribute(e, 'selected', ''));
+  // Show section
+  section(name);
+}
 
-	text('nav h1', S_TITLE);
-	document.title = capitalize(name) + ' - ' + S_TITLE;
+// Show section
+function section(name) {
+  $$('section').forEach((e) => hide(e));
+  $$('section[name="' + name + '"]').forEach((e) => show(e));
 
-	show(section);
+  document.title = capitalize(name) + ' - ' + S_TITLE;
 }
 
 // Start status view
 function status() {
-	text('#version', config.version);
-	text('#environment', config.environment);
-	text('#started', config.started);
-	text('#used', config.used);
-	text('#status', config.status);
+  text('#version', config.version);
+  text('#environment', config.environment);
+  text('#started', config.started);
+  text('#used', config.used);
+  text('#status', config.status);
 }
 
 // Start nodes view
 function nodes() {
-	// Connect list handlers
-	$$('section[name="nodes"] ol').forEach((e) => listen(e, 'click', select));
+  // Connect list handlers
+  $$('section[name="nodes"] ol').forEach((e) => listen(e, 'click', select));
+  $$('section[name="nodes"] #profiles').forEach((e) => listen(e, 'dblclick', external));
 }
 
 // Update nodes view
 function update() {
-	// Broker not connected?
-	if (!client.connected) {
-		// Show offline
-		hide('#content');
-		show('#offline');
+  // Broker not connected?
+  if (!client.connected) {
+    // Show offline
+    hide('#online');
+    show('#offline');
 
-		return;
-	}
+    return;
+  }
 
-	// Build lists
-	var contexts = '';
-	var nodes = '';
-	var profiles = '';
-	var connections = '';
+  // Build lists
+  var contexts = '';
+  var nodes = '';
+  var profiles = '';
+  var connections = '';
 
-	var already = [];
+  var already = [];
 
-	// For each topic
-	for (const topic in topics) {
-		// Get node
-		const node = topics[topic];
+  // For each topic
+  for (const topic in topics) {
+    // Get node
+    const node = topics[topic];
 
-		const context = node.context;
-		const name = node.name;
-		const scan = node.profiles;
+    const context = node.context;
+    const name = node.name;
+    const scan = node.profiles;
 
-		var attr = ' topic="' + topic + '" context="' + context + '"';
+    var attr = ' topic="' + topic + '" context="' + context + '"';
 
-		// Add context
-		if (!already.includes(context)) {
-			contexts += '<li' + attr + '>' + context + '</li>';
-			already.push(context);
-		}
+    // Add context
+    if (!already.includes(context)) {
+      contexts += '<li' + attr + '>' + context + '</li>';
+      already.push(context);
+    }
 
-		// Add node
-		attr += ' node="' + name + '"';
-		nodes += '<li' + attr + '>' + name + '</li>';
+    // Add node
+    attr += ' node="' + name + '"';
+    nodes += '<li' + attr + '>' + name + '</li>';
 
-		// Has profiles?
-		if (scan !== undefined) {
-			// For each profile
-			for (const profile of scan) {
-				// Get details
-				const name = profile.name;
-				const version = profile.version;
-				const type = (profile.server !== undefined)?'S':'C';
-				const link = profile.server || profile.client;
+    // Has profiles?
+    if (scan !== undefined) {
+      // For each profile
+      for (const profile of scan) {
+        // Get details
+        const name = profile.name;
+        const version = profile.version;
+        const type = (profile.server !== undefined)?'S':'C';
+        const link = profile.server || profile.client;
 
-				// Need or use?
-				if (link === topic) {
-					// Add profile
-					const ver = (version === undefined)?'':(' v' + version);
-					const a = attr + ' profile="' + name + '" type="' + type + '"';
+        // Need or use?
+        if (link === topic) {
+          // Add profile
+          const ver = (version === undefined)?'':(' v' + version);
+          const a = attr + ' profile="' + name + '" type="' + type + '"';
 
-					profiles += '<li' + a + '><span>' + name + ver + '</span><span>' + type + '</span></li>';
-				} else {
-					// Get connection node
-					const node = topics[link];
-					const ident = (node === undefined)?('<b>' + link + '</b>'):node.name;
+          profiles += '<li' + a + '><span>' + name + ver + '</span><span>' + type + '</span></li>';
+        } else {
+          // Get connection node
+          const node = topics[link];
+          const ident = (node === undefined)?('<b>' + link + '</b>'):node.name;
 
-					// Add connection
-					const invert = (type === 'S')?'C':'S';
-					const a = attr + ' profile="' + name + '" type="' + invert + '" connection="' + link + '"';
+          // Add connection
+          const invert = (type === 'S')?'C':'S';
+          const a = attr + ' profile="' + name + '" type="' + invert + '" connection="' + link + '"';
 
-					connections += '<li' + a + '>' + ident + '</li>';
-				}
-			}
-		}
-	}
+          connections += '<li' + a + '>' + ident + '</li>';
+        }
+      }
+    }
+  }
 
-	// Set list contents
-	html('#contexts', contexts);
-	html('#nodes', nodes);
-	html('#profiles', profiles);
-	html('#connections', connections);
+  // Set list contents
+  html('#contexts', contexts);
+  html('#nodes', nodes);
+  html('#profiles', profiles);
+  html('#connections', connections);
 
-	// Sort lists
-	sort('#contexts');
-	sort('#nodes');
-	sort('#profiles');
-	sort('#connections');
+  // Sort lists
+  sort('#contexts');
+  sort('#nodes');
+  sort('#profiles');
+  sort('#connections');
 
-	// Filter lists
-	filter();
+  // Filter lists
+  filter();
 
-	// Show content
-	hide('#offline');
-	show('#content');
+  // Show content
+  hide('#offline');
+  show('#online');
 }
 
-// Sort list items
+// Sort list elements
 function sort(selector) {
-	const list = $(selector);
+  const list = $(selector);
   var sorting;
 
   do {
     const items = $$(list, 'li');
-		const len = items.length - 1;
+    const len = items.length - 1;
 
     sorting = false;
 
     for (var n = 0; n < len; n++) {
-			const a = items[n];
-			const b = items[n + 1];
+      const a = items[n];
+      const b = items[n + 1];
 
       if (text(a) > text(b)) {
-	      list.insertBefore(b, a);
-	      sorting = true;
+        list.insertBefore(b, a);
+        sorting = true;
         break;
       }
     }
-	} while (sorting);
+  } while (sorting);
 }
 
 // Called when list item selected
 function select(e) {
-	// List item element?
-	const element = e.target;
-	if (tag(element) !== 'li') return;
+  // List item element?
+  const element = e.target;
+  if (tag(element) !== 'li') return;
 
-	// Get new selection
-	selection = {
-		topic: attribute(element, 'topic'),
-		context: attribute(element, 'context'),
-		node: attribute(element, 'node'),
-		profile: attribute(element, 'profile'),
-		type: attribute(element, 'type'),
-		connection: attribute(element, 'connection')
-	}
+  // Get new selection
+  selection = {
+    topic: attribute(element, 'topic'),
+    context: attribute(element, 'context'),
+    node: attribute(element, 'node'),
+    profile: attribute(element, 'profile'),
+    type: attribute(element, 'type'),
+    connection: attribute(element, 'connection')
+  };
 
-	// Filter new selection
-	filter();
+  // Filter new selection
+  filter();
+}
+
+// Open external link
+function external(e) {
+  if (selection.profile !== undefined)
+    window.open('https://' + config.profiles + '/' + selection.profile);
 }
 
 // Filter selection
 function filter() {
-	// Remove current selection
-	$$('section[name="nodes"] li[selected]').forEach((e) => attribute(e, 'selected', null));
+  // Remove current selection
+  $$('section[name="nodes"] li[selected]').forEach((e) => attribute(e, 'selected', null));
 
-	// Hide all list items
-	$$('#nodes li').forEach((e) => hide(e));
-	$$('#profiles li').forEach((e) => hide(e));
-	$$('#connections li').forEach((e) => hide(e));
+  // Hide all list items
+  $$('#nodes li').forEach((e) => hide(e));
+  $$('#profiles li').forEach((e) => hide(e));
+  $$('#connections li').forEach((e) => hide(e));
 
-	// Reset properties lists
-	text('#heading1', S_SERVER);
-	text('#heading2', S_CLIENT);
+  // Reset properties lists
+  text('#heading1', S_SERVER);
+  text('#heading2', S_CLIENT);
 
-	html('#properties1', '');
-	html('#properties2', '');
+  html('#properties0', '');
+  html('#properties1', '');
+  html('#properties2', '');
 
-	// No selection?
-	if (selection === undefined) return;
+  // No selection?
+  if (selection === undefined) return;
 
-	// Get current selection
-	const topic = selection.topic;
-	const context = selection.context;
-	const node = selection.node;
-	const profile = selection.profile;
-	const type = selection.type;
-	const connection = selection.connection;
+  // Get current selection
+  const topic = selection.topic;
+  const context = selection.context;
+  const node = selection.node;
+  const profile = selection.profile;
+  const type = selection.type;
+  const connection = selection.connection;
 
-	// No topic?
-	if (topic === null) return;
+  // No topic?
+  if (topic === null) return;
 
-	// Select context
-	if (context === null) return;
-	var attr = '[context="' + context + '"]';
+  // Select context
+  if (context === null) return;
+  var attr = '[context="' + context + '"]';
 
-	$$('#contexts li' + attr).forEach((e) => attribute(e, 'selected', ''));
-	$$('#nodes li' + attr).forEach((e) => show(e));
+  $$('#contexts li' + attr).forEach((e) => attribute(e, 'selected', ''));
+  $$('#nodes li' + attr).forEach((e) => show(e));
 
-	// Select node
-	if (node === null) return;
-	attr = '[topic="' + topic + '"]' + attr + '[node="' + node + '"]';
+  // Select node
+  if (node === null) return;
+  attr = '[topic="' + topic + '"]' + attr + '[node="' + node + '"]';
 
-	$$('#nodes li' + attr).forEach((e) => attribute(e, 'selected', ''));
-	$$('#profiles li' + attr).forEach((e) => show(e));
+  $$('#nodes li' + attr).forEach((e) => attribute(e, 'selected', ''));
+  $$('#profiles li' + attr).forEach((e) => show(e));
 
-	listProperties('#properties', topics[topic], ['context', 'name', 'profiles']);
+  listProperties('#properties0', topics[topic], ['context', 'name', 'profiles']);
 
-	// Select profile
-	if (profile === null) return;
-	attr += '[profile="' + profile + '"][type="' + type + '"]';
+  // Select profile
+  if (profile === null) return;
+  attr += '[profile="' + profile + '"][type="' + type + '"]';
 
-	$$('#profiles li' + attr).forEach((e) => attribute(e, 'selected', ''));
-	$$('#connections li' + attr).forEach((e) => show(e));
+  $$('#profiles li' + attr).forEach((e) => attribute(e, 'selected', ''));
+  $$('#connections li' + attr).forEach((e) => show(e));
 
-	// Swap property headers?
-	if (type === 'C') {
-		text('#heading1', S_CLIENT);
-		text('#heading2', S_SERVER);
-	}
+  // Swap property headers?
+  if (type === 'C') {
+    text('#heading1', S_CLIENT);
+    text('#heading2', S_SERVER);
+  }
 
-	// Fill profile properties
-	listProfile('#properties1', topic, profile, type);
+  // Fill profile properties
+  listProfile('#properties1', topic, profile, type);
 
-	// Select connection
-	if (connection === null) return;
-	attr += '[connection="' + connection + '"]';
+  // Select connection
+  if (connection === null) return;
+  attr += '[connection="' + connection + '"]';
 
-	$$('#connections li' + attr).forEach((e) => attribute(e, 'selected', ''));
+  $$('#connections li' + attr).forEach((e) => attribute(e, 'selected', ''));
 
-	// Fill connection properties
-	const invert = (type === 'S')?'C':'S';
-	listProfile('#properties2', connection, profile, invert);
+  // Fill connection properties
+  const invert = (type === 'S')?'C':'S';
+  listProfile('#properties2', connection, profile, invert);
 }
 
 // List node properties
 function listProperties(selector, properties, ignore) {
-	var list = '';
+  var list = '';
 
-	// Has properties?
-	if (properties !== undefined) {
-		// Add properties
-		for (const name in properties) {
-			if (ignore === undefined || !ignore.includes(name))
-				list += '<li><h5>' + name + '</h5><p>' + properties[name] + '</p></li>';
-		}
-	}
+  // Has properties?
+  if (properties !== undefined) {
+    // Add properties
+    for (const name in properties) {
+      if (ignore === undefined || !ignore.includes(name))
+        list += '<li><h5>' + name + '</h5><p>' + properties[name] + '</p></li>';
+    }
+  }
 
-	// Set list items
-	html(selector, list);
+  // Set list items
+  html(selector, list);
 }
 
 // List profile properties
 function listProfile(selector, topic, name, type) {
-	// Find profile?
-	const profile = getProfile(topic, name, type);
-	const properties = (profile === null)?undefined:profile.properties;
+  // Find profile?
+  const profile = getProfile(topic, name, type);
+  const properties = (profile === null)?undefined:profile.properties;
 
-	// List its properties
-	listProperties(selector, properties);
+  // List its properties
+  listProperties(selector, properties);
 }
 
 // Get profile given topic, name and type
 function getProfile(topic, name, type) {
-	// Topic exists?
-	const node = topics[topic];
+  // Topic exists?
+  const node = topics[topic];
 
-	if (node !== undefined) {
-		// Has profiles?
-		const scan = node.profiles;
+  if (node !== undefined) {
+    // Has profiles?
+    const scan = node.profiles;
 
-		if (scan !== undefined) {
-			// Find name and type
-			const need = (type === 'S')?'server':'client';
+    if (scan !== undefined) {
+    // Find name and type
+    const need = (type === 'S')?'server':'client';
 
-			for (const profile of scan) {
-				if (profile.name === name &&
-					profile[need] !== undefined)
-					return profile;
-			}
-		}
-	}
-	return null;
+    for (const profile of scan) {
+      if (profile.name === name &&
+        profile[need] !== undefined)
+        return profile;
+      }
+    }
+  }
+  return null;
 }
 
 // Log message
 function log(msg) {
-	const list = $('#logs');
+  const list = $('#logs');
 
-	text(list, msg + '\n', true);
-	list.scrollIntoView(false);		/////
+  text(list, msg + '\n', true);
+  list.scrollIntoView(false);
 }
 
 // Update settings view
 function settings() {
-	listen('#connect', 'click', connect);
-	listen('#disconnect', 'click', disconnect);
+  listen('#connect', 'click', connect);
+  listen('#disconnect', 'click', disconnect);
 }
 
 // Show error view
 function error(msg) {
-	text('nav h1', S_TITLE + ' - ' + msg);
-	document.title = 'Error - ' + S_TITLE;
-
-	show('section[name="error"]');
+  text('nav h1', S_TITLE + ' - ' + msg);
+  section('error');
 }
 
 // Parse json packet
 function parse(packet) {
-	try {
-		return JSON.parse(packet);
-	} catch (e) {
-		log('Parse error: ' + e.message);
-	}
-	return null;
+  try {
+    return JSON.parse(packet);
+  } catch (e) {
+    log('parse error: ' + e.message);
+  }
+  return null;
 }
 
 // Stringify json packet
 function stringify(packet) {
-	try {
-		return JSON.stringify(packet);
-	} catch (e) {
-		error('Stringify error: ' + e.message);
-	}
-	return null;
+  try {
+    return JSON.stringify(packet);
+  } catch (e) {
+    log('stringify error: ' + e.message);
+  }
+  return null;
 }
 
 // Caps first letter
 function capitalize(s) {
-	return s.charAt(0).toUpperCase() + s.slice(1);
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 // Show element
 function show(selector) {
-	attribute(selector, 'hidden', null);
+  attribute(selector, 'hidden', null);
 }
 
 // Hide element
 function hide(selector) {
-	attribute(selector, 'hidden', '');
+  attribute(selector, 'hidden', '');
 }
 
 // Get element tag
 function tag(selector) {
-	return property(selector, 'tagName').toLowerCase();
+  return property(selector, 'tagName').toLowerCase();
 }
 
 // Set element text
 function text(selector, value, append) {
-	return property(selector, 'textContent', value, append);
+  return property(selector, 'textContent', value, append);
 }
 
 // Set element html
 function html(selector, value) {
-	return property(selector, 'innerHTML', value);
+  return property(selector, 'innerHTML', value);
 }
 
 // Set element attribute
 function attribute(selector, name, value) {
-	const element = $(selector);
+  const element = $(selector);
 
-	if (value !== undefined) {
-		if (value === null) element.removeAttribute(name);
-		else element.setAttribute(name, value);
-	}
-	return element.getAttribute(name);
+  if (value !== undefined) {
+    if (value === null) element.removeAttribute(name);
+    else element.setAttribute(name, value);
+  }
+  return element.getAttribute(name);
 }
 
 // Set element property
 function property(selector, name, value, append) {
-	const element = $(selector);
+  const element = $(selector);
 
-	if (value !== undefined) {
-		if (append) element[name] += value;
-		else element[name] = value;
-	}
-	return element[name];
+  if (value !== undefined) {
+    if (append) element[name] += value;
+    else element[name] = value;
+  }
+  return element[name];
 }
 
 // Attach event handler
 function listen(selector, name, handler, options) {
-	$(selector).addEventListener(name, handler, options);
+  $(selector).addEventListener(name, handler, options);
 }
 
 // Run seletor query

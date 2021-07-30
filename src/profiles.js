@@ -12,117 +12,117 @@ const https = require('https');
 var master;
 var config;
 
-var cache;
+var profiles;
 
 // Local functions
 
 // Init service
 function init(service, section) {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Keep master
-		master = service;
-		config = section;
+    // Keep master
+    master = service;
+    config = section;
 
-    cache = {};
+    profiles = {};
 
-		debug('++ profile service ' + config.domain);
-		resolve();
-	});
+    debug('++ profiles service ' + config.domain);
+    resolve();
+  });
 }
 
 // Exit service
 function exit() {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Destroy objects
-    cache = undefined;
+    // Destroy objects
+    profiles = undefined;
 
-		debug('-- profile service');
-		resolve();
-	});
+    debug('-- profiles service');
+    resolve();
+  });
 }
 
 // Start profile cache
 function cacheStart() {
   // Wipe cache?
   if (!config.cache)
-    cache = {};
+    profiles = {};
 }
 
 // Cache profile
 function cacheProfile(name) {
   // Exists in cache?
-  if (cache[name] !== undefined)
+  if (profiles[name] !== undefined)
     return null;
 
   // Start caching
-  cache[name] = null;
+  profiles[name] = null;
 
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Send request
-		const url = 'https://' + config.domain + '/profiles/' + name;
+    // Send request
+    const url = 'https://' + config.domain + '/' + name;
 
-		debug('<< profile GET ' + name);
+    debug('<< profiles GET ' + name);
 
-		const req = https.get(url, (res) => {
-			// Get status
-			const status = res.statusCode;
+    const req = https.get(url, (res) => {
+      // Get status
+      const status = res.statusCode;
       const message = res.statusMessage;
 
-			debug('>> profile ' + status + ' ' + message);
+      debug('>> profiles ' + status + ' ' + message);
 
-			// Bad status?
-			if (status < 200 || status > 299)
+      // Bad status?
+      if (status < 200 || status > 299)
         return resolve(false);
 
-			// Collate response
-			var chunks = [];
+      // Collate response
+      var chunks = [];
 
-			res.on('data', (chunk) => chunks.push(chunk));
+      res.on('data', (chunk) => chunks.push(chunk));
 
       res.on('end', () => {
-        cache[name] = parse(chunks.join(''));
+        profiles[name] = parse(chunks.join(''));
         resolve(true);
       });
-		})
-		// Failure
-		.on('error', (e) => reject(e));
+    })
+    // Failure
+    .on('error', (e) => reject(e));
 
-		// Send it
-		req.end();
-	});
+    // Send it
+    req.end();
+  });
 }
 
 // Get profile definition
 function getProfile(name) {
-  return cache[name] || null;
+  return profiles[name] || null;
 }
 
 // Parse json packet
 function parse(packet) {
-	try {
-		return JSON.parse(packet);
-	} catch (e) {
-		error('Parse error: ' + e.message);
-	}
-	return null;
+  try {
+    return JSON.parse(packet);
+  } catch (e) {
+    error('parse error: ' + e.message);
+  }
+  return null;
 }
 
 // Output a message
 function print(text) {
-	master.print(text);
+  master.print(text);
 }
 
 // Output a debug
 function debug(text) {
-	master.debug(text);
+  master.debug(text);
 }
 
 // Output an error
 function error(text) {
-	master.error(text);
+  master.error(text);
 }
 
 // Exports

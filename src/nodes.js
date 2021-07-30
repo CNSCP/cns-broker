@@ -18,56 +18,52 @@ var caching;
 
 // Init service
 function init(service, section) {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Keep master
-		master = service;
-		config = section;
+    // Keep master
+    master = service;
+    config = section;
 
     nodes = {};
     caching = 0;
 
-		debug('++ connect service');
-		resolve();
-	});
+    debug('++ nodes service');
+    resolve();
+  });
 }
 
 // Start service
 function start() {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Get services
-		messages = master.find('messages');
-		profiles = master.find('profiles');
+    // Get services
+    messages = master.find('messages');
+    profiles = master.find('profiles');
 
-		resolve();
-	});
+    resolve();
+  });
 }
 
 // Exit service
 function exit() {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Destroy objects
-		profiles = undefined;
-    nodes = undefined;
+    // Destroy objects
+    messages = undefined;
+    profiles = undefined;
 
-		debug('-- connect service');
-		resolve();
-	});
+    debug('-- nodes service');
+    resolve();
+  });
 }
 
-// Add node
-function addNode(id, node) {
-  // Add node entry
-  nodes[id] = node;
-  reconnect();
-}
+// Set node
+function setNode(id, node) {
+  // Removing node?
+  if (node === undefined)
+    delete nodes[id];
+  else nodes[id] = node;
 
-// Remove node
-function removeNode(id) {
-  // Remove node entry
-  delete nodes[id];
   reconnect();
 }
 
@@ -81,7 +77,7 @@ function reconnect() {
   cacheProfiles()
   // Failure
   .catch((e) => {
-    error(e.message);
+    error('caching error: ' + e.message);
   })
   // And finally
   .finally((result) => {
@@ -152,7 +148,7 @@ function connect(id, node, profile, ids) {
   const definition = profiles.getProfile(name);
 
   if (definition === null) {
-    error('Profile ' + name + ' not found');
+    error('connect error: profile ' + name + ' not found');
     return;
   }
 
@@ -161,7 +157,7 @@ function connect(id, node, profile, ids) {
   const version = definition.versions[index - 1];
 
   if (version === undefined) {
-    error('Profile ' + name + ' version ' + index + ' not found');
+    error('connect error: profile ' + name + ' version ' + index + ' not found');
     return;
   }
 
@@ -173,14 +169,12 @@ function connect(id, node, profile, ids) {
     connectServer(id, node, profile, name, properties, ids);
 
 //  if (node.client === id)
-
 }
-
 
 //
 function connectServer(serverId, server, profile, name, properties, ids) {
 
-  console.log('connect clients of ' + name + ' to server ' + serverId + ' under ' + server.context);
+//  console.log('connect clients of ' + name + ' to server ' + serverId + ' under ' + server.context);
 
   //
   var pub = addProperties(profile, properties);
@@ -275,7 +269,7 @@ function locate(node, name, type, id) {
       }
     }
   }
-//console.log('not found ' + name + ' ' + type + ' = ' + id);
+  //console.log('not found ' + name + ' ' + type + ' = ' + id);
   return null;
 }
 
@@ -299,7 +293,7 @@ function addProperties(profile, properties, defaults) {
     //
     for (const property of properties) {
       //
-      if (property.server === need && property.required === null) {
+      if (property.server === need /*&& property.required === null*/) {
         //
         const name = property.name;
         const value = profile.properties[name];
@@ -323,17 +317,17 @@ function republish(id, ids) {
 
 // Output a message
 function print(text) {
-	master.print(text);
+  master.print(text);
 }
 
 // Output a debug
 function debug(text) {
-	master.debug(text);
+  master.debug(text);
 }
 
 // Output an error
 function error(text) {
-	master.error(text);
+  master.error(text);
 }
 
 // Exports
@@ -342,5 +336,4 @@ exports.init = init;
 exports.start = start;
 exports.exit = exit;
 
-exports.addNode = addNode;
-exports.removeNode = removeNode;
+exports.setNode = setNode;

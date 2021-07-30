@@ -8,6 +8,8 @@
 const express = require('express');
 const compression = require('compression');
 
+const date = require('./date');
+
 // Exceptions
 
 const E_NOTFOUND = exception(404, 'Not found');
@@ -20,36 +22,36 @@ var config;
 var app;
 var server;
 
-var started = new Date();
-var used = new Date();
+var started = date.now();
+var used = date.now();
 
 // Local functions
 
 // Init service
 function init(service, section) {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Keep master
-		master = service;
-		config = section;
+    // Keep master
+    master = service;
+    config = section;
 
-		// Initialize express
-		app = express();
+    // Initialize express
+    app = express();
 
-		// Kubernetes health check endpoint
-		app.get('/healthz', (req, res) => {
-			res.send('Healthy');
-		});
+    // Kubernetes health check endpoint
+    app.get('/healthz', (req, res) => {
+      res.send('Healthy');
+    });
 
-		// Request debug?
+    // Request debug?
     if (master.config.output === 'verbose') {
       // Insert wedge
-  		app.use((req, res, next) => {
-  			debug('>> server ' + req.method + ' ' + req.path);
+      app.use((req, res, next) => {
+        debug('>> server ' + req.method + ' ' + req.path);
         res.on('finish', () => debug('<< server ' + res.statusCode + ' ' + res.statusMessage));
 
         next();
-  	  });
+      });
     }
 
     // Using compression
@@ -64,89 +66,95 @@ function init(service, section) {
       config.public.split(',').forEach((root) => app.use(express.static(root)));
 
     // All other requests
-		app.use((req, res) => fail(res, E_NOTFOUND));
+    app.use((req, res) => fail(res, E_NOTFOUND));
 
-		debug('++ server service');
-		resolve();
-	});
+    debug('++ server service');
+    resolve();
+  });
 }
 
 // Start service
 function start() {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Get services
-		resolve();
-	});
+    // Get services
+    resolve();
+  });
 }
 
 // Run service
 function run() {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Get config
-		const host = config.host;
-		const port = config.port;
+    // Get config
+    const host = config.host;
+    const port = config.port;
 
-		// Start server
-		server = app.listen(port, host, () => {
-			debug('<> server on ' + host + ':' + port);
-			resolve();
-		})
-		// Failure
-		.on('error', (e) => {
-			reject(e);
-		});
-	});
+    // Start server
+    server = app.listen(port, host, () => {
+      debug('<> server on ' + host + ':' + port);
+      resolve();
+    })
+    // Failure
+    .on('error', (e) => {
+      reject(e);
+    });
+  });
 }
 
 // Term service
 function term() {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Close server?
-		if (server !== undefined) {
+    // Close server?
+    if (server !== undefined) {
       debug('>< server closed');
-			server.close();
+      server.close();
     }
 
     resolve();
-	});
+  });
 }
 
 // Exit service
 function exit() {
-	// I promise to
+  // I promise to
   return new Promise((resolve, reject) => {
-		// Destroy objects
-		app = undefined;
-		server = undefined;
+    // Destroy objects
+    app = undefined;
+    server = undefined;
 
-		debug('-- server service');
-		resolve();
-	});
+    debug('-- server service');
+    resolve();
+  });
 }
 
 // Send config response
 function getConfig(res) {
-	// Construct response
+  // Construct response
   const messages = master.config.messages;
 
   res.setHeader("Content-Type", 'text/javascript');
 
-	response(res, 200, "const config = {" +
+  response(res, 200, "const config = {" +
     "version: '" + master.version() + "', " +
     "environment: '" + capitalize(master.environment()) + "', " +
     "protocol: '" + messages.protocol + "', " +
     "host: '" + messages.host + "', " +
     "port: '" + messages.port + "', " +
-    "started: '" + toDateTime(started) + "', " +
-    "used: '" + toTimeAgo(used) + "'," +
+    "profiles: '" + master.config.profiles.domain + "', " +
+    "started: '" + date.toDateTime(started) + "', " +
+    "used: '" + date.toTimeAgo(used) + "'," +
     "status: 'Running'" +
-	"};");
+  "};");
 
   // Set last used
-  used = new Date();
+  used = date.now();
+}
+
+// Caps first letter
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 // Send fail response
@@ -163,35 +171,35 @@ function fail(res, e) {
     debug(e.stack);
   }
 
-	// Send error page
-	page(res, status, 'Error - CNS Broker',
+  // Send error page
+  page(res, status, 'Error - CNS Broker',
     '<nav>' +
       '<h1>CNS Broker - ' + message + '</h1>' +
     '</nav>' +
-	  '<section>' +
-  		'<p>Most likely causes:</p>' +
-  		'<ul>' +
-  			'<li>There might be a typing error in the page\'s URL</li>' +
-  			'<li>The page may have been removed or had its URL changed</li>' +
-  			'<li>The page may be temporarily offline</li>' +
-  		'</ul>' +
+    '<section>' +
+      '<p>Most likely causes:</p>' +
+      '<ul>' +
+        '<li>There might be a typing error in the page\'s URL</li>' +
+        '<li>The page may have been removed or had its URL changed</li>' +
+        '<li>The page may be temporarily offline</li>' +
+      '</ul>' +
     '</section>');
 }
 
 // Send page response
 function page(res, status, title, body) {
-	// Construct page
-	response(res, status,
+  // Construct page
+  response(res, status,
     '<!doctype html>' +
-		'<html lang="en">' +
-			'<head>' +
-      	'<meta name="description" content="CNS Broker">' +
-      	'<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
-				'<link type="text/css" rel="stylesheet" href="/main.css"/>' +
-				'<title>' + title + '</title>' +
-			'</head>' +
-			'<body>' + body + '</body>' +
-		'</html>');
+    '<html lang="en">' +
+      '<head>' +
+      '<meta name="description" content="CNS Broker">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+        '<link type="text/css" rel="stylesheet" href="/main.css"/>' +
+        '<title>' + title + '</title>' +
+      '</head>' +
+      '<body>' + body + '</body>' +
+    '</html>');
 }
 
 // Send response
@@ -209,78 +217,19 @@ function exception(status, message) {
   return e;
 }
 
-// Return formatted date
-function toDate(date) {
-	// Get date details
-	const day = date.getDate();
-	const month = date.toLocaleString('en-us', {month: 'long'});
-	const year = date.getFullYear();
-
-	return '' + day + ' ' + month + ' ' + year;
-}
-
-// Return formatted time
-function toTime(date) {
-	// Get time details
-	var hours = date.getHours();
-	var minutes = date.getMinutes();
-	var seconds = date.getSeconds();
-
-	const am = (hours <= 12);
-	const ampm = am?'am':'pm';
-
-	if (!am) hours -= 12;
-
-	if (minutes < 10) minutes = '0' + minutes;
-	if (seconds < 10) seconds = '0' + seconds;
-
-	return '' + hours + ':' + minutes + ampm;
-}
-
-// Return formatted date and time
-function toDateTime(date) {
-	return toDate(date) + ' at ' + toTime(date);
-}
-
-// Return elapsed time from date
-function toTimeAgo(date) {
-	const seconds = Math.floor((new Date() - date) / 1000);
-
-	var interval;
-	var measure;
-
-	if ((interval = Math.floor(seconds / 31536000)) >= 1) measure = 'year';
-	else if ((interval = Math.floor(seconds / 2592000)) >=1) measure = 'month';
-	else if ((interval = Math.floor(seconds / 86400)) >= 1) measure = 'day';
-	else if ((interval = Math.floor(seconds / 3600)) >= 1) measure = 'hour';
-	else if ((interval = Math.floor(seconds / 60)) >= 1) measure = 'minute';
-	else if ((interval = seconds) >= 1) measure = 'second';
-	else return 'Just now';
-
-	if (interval !== 1)
-		measure += 's';
-
-	return interval + ' ' + measure + ' ago';
-}
-
-// Caps first letter
-function capitalize(s) {
-	return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 // Output a message
 function print(text) {
-	master.print(text);
+  master.print(text);
 }
 
 // Output a debug
 function debug(text) {
-	master.debug(text);
+  master.debug(text);
 }
 
 // Output an error
 function error(text) {
-	master.error(text);
+  master.error(text);
 }
 
 // Exports

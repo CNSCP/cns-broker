@@ -1,4 +1,4 @@
-// index.js - Node instance
+// index.js - Broker instance
 // Copyright 2021 Padi, Inc. All Rights Reserved.
 
 'use strict';
@@ -13,8 +13,8 @@ const config = require('./config.json');
 service.start(config, {
   // Command line flags
   flags: [
-    ['--host', 'addr', 'Set node server host'],
-    ['--port', 'number', 'Set node server port']
+    ['--host', 'addr', 'Set broker server host'],
+    ['--port', 'number', 'Set broker server port']
   ],
   // Process flag
   flag: (flag, value) => {

@@ -1,9 +1,9 @@
 {
-	"environment": "staging",
-	"profiles": {
-		"domain": "cp.staging.padi.io"
-	},
-	"server": {
-		"public": "environments/staging/public,public"
-	}
+  "environment": "staging",
+  "profiles": {
+    "domain": "cp.staging.padi.io/profiles"
+  },
+  "server": {
+    "public": "environments/staging/public,public"
+  }
 }
