@@ -11,7 +11,7 @@ html {
 
 body {
   font-family: "Roboto", "Helvetica", sans-serif;
-  font-weight: 300;
+  font-weight: 200;
   font-size: 14px;
   color: rgba(0, 0, 0, 0.54);
   margin: 0;
@@ -20,7 +20,7 @@ body {
 
 h1 {
   font-size: 20px;
-  font-weight: 300;
+  font-weight: 200;
   color: rgba(0, 0, 0, 0.87);
   line-height: 28px;
   margin: 0 0 16px 0;
@@ -28,21 +28,21 @@ h1 {
 
 h2 {
   font-size: 17px;
-  font-weight: 300;
+  font-weight: 200;
   line-height: 20px;
   margin: 0 0 16px 0;
 }
 
 h3 {
   font-size: 16px;
-  font-weight: 300;
+  font-weight: 200;
   line-height: 20px;
   margin: 0 0 16px 0;
 }
 
 h4 {
   font-size: 17px;
-  font-weight: 300;
+  font-weight: 200;
   line-height: 20px;
   margin: -16px 0 16px 0;
 }
@@ -126,12 +126,18 @@ table th {
   white-space: nowrap;
   text-overflow: ellipsis;
   text-align: left;
+  vertical-align: top;
   padding: 16px 18px;
 }
 
 table td {
+  font-size: 13px;
   vertical-align: top;
   padding: 15px 18px;
+}
+
+table td:nth-child(1) {
+  white-space: nowrap;
 }
 
 table td:nth-child(2) {
@@ -157,6 +163,7 @@ table[grid] {
   table-layout: fixed;
   margin: 0;
   max-width: none;
+  min-width: 1024px;
   width: 100%;
   height: 100%;
 }
@@ -192,7 +199,6 @@ ol li {
   padding: 0 18px;
   line-height: 32px;
   height: 32px;
-/*  transition: background-color 0.2s ease;*/
 }
 
 ol li:focus,
@@ -214,7 +220,7 @@ li p {
 }
 
 li b {
-  font-weight: 300;
+  font-weight: 200;
   color: #ff4081;
 }
 
@@ -316,6 +322,7 @@ nav {
 
 nav h1 {
   float: left;
+  margin-right: 16px;
 }
 
 nav a {
@@ -391,6 +398,8 @@ center div {
   transition: opacity 0.2s ease, background-color 0.15s ease, background-size 0.15s ease;
 }
 
+/* Anti-selection */
+
 mark,
 table th,
 ol,
@@ -399,7 +408,12 @@ nav {
   user-select: none;
 }
 
-@media screen and (max-width: 540px) {
-  nav {text-align: center;}
-  nav h1 {display: none;}
+/* Anti-scrollbar */
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
 }

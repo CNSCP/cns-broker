@@ -39,7 +39,7 @@ function init(service, section) {
       // Ignore server publish
       if (client === null) return;
 
-      //
+      // Node id is topic
       const id = packet.topic;
 
       // Ignore internal publish

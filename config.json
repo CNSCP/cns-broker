@@ -18,7 +18,7 @@
     "port": "9001"
   },
   "profiles": {
-    "domain": "cp.padi.io",
+    "domain": "cp.padi.io/profiles",
     "cache": true
   },
   "server": {

@@ -20,28 +20,14 @@
   <!-- View navigation -->
   <nav>
     <h1>CNS Broker</h1>
-    <a ripple href="#status">Status</a>
-    <a ripple href="#nodes">Nodes</a>
-    <a ripple href="#log">Log</a>
-    <a ripple href="#settings">Settings</a>
-    <a ripple href="#help">Help</a>
+    <a ripple href="/">Status</a>
+    <a ripple selected href="/nodes">Nodes</a>
   </nav>
 
-  <!-- Status view -->
-  <section hidden name="status">
-    <table>
-      <tr><th>Version</th><td id="version"></td></tr>
-      <tr><th>Environment</th><td id="environment"></td></tr>
-      <tr><th>Started</th><td id="started"></td></tr>
-      <tr><th>Used</th><td id="used"></td></tr>
-      <tr><th>Status</th><td id="status"></td></tr>
-    </table>
-  </section>
-
   <!-- Nodes view -->
-  <section hidden name="nodes">
+  <section name="nodes">
     <center id="offline"><div>
-      <mark primary><span>Client disconnected</span></mark>
+      <mark primary><span>Broker not connected</span></mark>
     </div></center>
 
     <table hidden grid id="online">
@@ -66,25 +52,8 @@
     </table>
   </section>
 
-  <!-- Log view -->
-  <section hidden name="log">
-    <pre id="logs"></pre>
-  </section>
-
-  <!-- Settings view -->
-  <section hidden name="settings">
-    <h2>Settings</h2>
-    <button raised id="connect" style="margin-right: 10px">Connect</button>
-    <button raised id="disconnect">Disconnect</button>
-  </section>
-
-  <!-- Help view -->
-  <section hidden name="help">
-    <h2>Help</h2>
-  </section>
-
-  <!-- Error view -->
-  <section hidden name="error">
+  <!-- Problem view -->
+  <section hidden name="problem">
     <p>Most likely causes:</p>
     <ul>
       <li>There might be a typing error in the page's URL</li>
@@ -99,18 +68,6 @@
 <script>
 (function() {
 
-// Errors
-
-const E_NOCONFIG = 'Not configured';
-const E_NOTFOUND = 'Not found';
-
-// Strings
-
-const S_TITLE = 'CNS Broker';
-
-const S_SERVER = 'Server';
-const S_CLIENT = 'Client';
-
 // Local data
 
 var client;
@@ -121,42 +78,38 @@ var selection;
 // Main entry point
 function main() {
   // Config loaded?
-  if (config === undefined) {
-    error(E_NOCONFIG);
-    return;
+  if (config === undefined)
+    problem('Not configured');
+  else {
+    // Connect to broker
+    connect();
+    nodes();
   }
+}
 
-  // Connect to broker
-  connect();
+// Show problem view
+function problem(msg) {
+  document.title = 'Error - CNS Broker';
+  text('nav h1', 'CNS Broker - ' + msg);
 
-  // Update views
-  status();
-  nodes();
-  settings();
-
-  view();
-
-  // Url hash change hook
-  listen(window, 'hashchange', view);
+  hide('section[name="nodes"]');
+  show('section[name="problem"]');
 }
 
 // Connect to broker
 function connect() {
-  // Already connected?
-  if (client !== undefined) return;
-
-  log('connecting...');
+  debug('connecting...');
 
   client = mqtt.connect(config)
   // Connection established
   .on('connect', () => {
-    log('<> messages connect');
+    debug('<> messages connect');
     topics = {};
     update();
   })
   // Topic changed
   .on('message', (topic, message) => {
-    log('>> messages pub ' + topic);
+    debug('>> messages pub ' + topic);
     // Set or remove?
     if (message.length === 0)
       delete topics[topic];
@@ -166,29 +119,29 @@ function connect() {
   })
   // Server broke connection
   .on('disconnect', () => {
-    log('>< messages disconnect');
+    debug('>< messages disconnect');
   })
   // Server went offline
   .on('offline', () => {
-    log('>< messages offline');
+    debug('>< messages offline');
   })
   // Client trying to reconnect
   .on('reconnect', () => {
-    log('<< messages reconnect');
+    debug('<< messages reconnect');
   })
   // Client closed
   .on('close', () => {
-    log('>< messages close');
+    debug('>< messages close');
     update();
   })
   // Client terminated
   .on('end', () => {
-    log('>< messages end');
+    debug('>< messages end');
     client = undefined;
   })
   // Failure
-  .on('error', (error) => {
-    log('client error: ' + error.message);
+  .on('error', (e) => {
+    error('client error: ' + e.message);
   });
 
   // Subscribe all topics
@@ -197,61 +150,12 @@ function connect() {
 
 // Subscribe to topic
 function subscribe(topic) {
-  log('<< messages sub ' + topic);
+  debug('<< messages sub ' + topic);
 
   client.subscribe(topic, {
     rap: true,
     rh: true
   });
-}
-
-// Disconnect from broker
-function disconnect() {
-  // Not connected?
-  if (client === undefined) return;
-
-  log('disconnecting...');
-  client.end();
-}
-
-// Show selected view
-function view() {
-  // Deselect nav
-  $$('nav a').forEach((e) => attribute(e, 'selected', null));
-
-  // Get view from hash
-  const hash = window.location.hash || '#status';
-  const name = hash.slice(1);
-
-  // Valid section?
-  if ($('section[name="' + name + '"]') === null) {
-    error(E_NOTFOUND);
-    return;
-  }
-
-  // Select nav
-  $$('nav a[href="' + hash + '"]').forEach((e) => attribute(e, 'selected', ''));
-  text('nav h1', S_TITLE);
-
-  // Show section
-  section(name);
-}
-
-// Show section
-function section(name) {
-  $$('section').forEach((e) => hide(e));
-  $$('section[name="' + name + '"]').forEach((e) => show(e));
-
-  document.title = capitalize(name) + ' - ' + S_TITLE;
-}
-
-// Start status view
-function status() {
-  text('#version', config.version);
-  text('#environment', config.environment);
-  text('#started', config.started);
-  text('#used', config.used);
-  text('#status', config.status);
 }
 
 // Start nodes view
@@ -414,8 +318,8 @@ function filter() {
   $$('#connections li').forEach((e) => hide(e));
 
   // Reset properties lists
-  text('#heading1', S_SERVER);
-  text('#heading2', S_CLIENT);
+  text('#heading1', 'Server');
+  text('#heading2', 'Client');
 
   html('#properties0', '');
   html('#properties1', '');
@@ -460,8 +364,8 @@ function filter() {
 
   // Swap property headers?
   if (type === 'C') {
-    text('#heading1', S_CLIENT);
-    text('#heading2', S_SERVER);
+    text('#heading1', 'Client');
+    text('#heading2', 'Server');
   }
 
   // Fill profile properties
@@ -528,32 +432,12 @@ function getProfile(topic, name, type) {
   return null;
 }
 
-// Log message
-function log(msg) {
-  const list = $('#logs');
-
-  text(list, msg + '\n', true);
-  list.scrollIntoView(false);
-}
-
-// Update settings view
-function settings() {
-  listen('#connect', 'click', connect);
-  listen('#disconnect', 'click', disconnect);
-}
-
-// Show error view
-function error(msg) {
-  text('nav h1', S_TITLE + ' - ' + msg);
-  section('error');
-}
-
 // Parse json packet
 function parse(packet) {
   try {
     return JSON.parse(packet);
   } catch (e) {
-    log('parse error: ' + e.message);
+    error('parse error: ' + e.message);
   }
   return null;
 }
@@ -563,14 +447,9 @@ function stringify(packet) {
   try {
     return JSON.stringify(packet);
   } catch (e) {
-    log('stringify error: ' + e.message);
+    error('stringify error: ' + e.message);
   }
   return null;
-}
-
-// Caps first letter
-function capitalize(s) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 // Show element
@@ -589,8 +468,8 @@ function tag(selector) {
 }
 
 // Set element text
-function text(selector, value, append) {
-  return property(selector, 'textContent', value, append);
+function text(selector, value) {
+  return property(selector, 'textContent', value);
 }
 
 // Set element html
@@ -610,13 +489,12 @@ function attribute(selector, name, value) {
 }
 
 // Set element property
-function property(selector, name, value, append) {
+function property(selector, name, value) {
   const element = $(selector);
 
-  if (value !== undefined) {
-    if (append) element[name] += value;
-    else element[name] = value;
-  }
+  if (value !== undefined)
+    element[name] = value;
+
   return element[name];
 }
 
@@ -651,6 +529,17 @@ function $(parent, selector) {
 // Query all helper
 function $$(parent, selector) {
   return query(parent, selector, true);
+}
+
+// Debug message
+function debug(msg) {
+  if (config.environment !== 'production')
+    console.info(msg);
+}
+
+// Error message
+function error(msg) {
+  console.warn(msg);
 }
 
 // Call main

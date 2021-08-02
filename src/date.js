@@ -70,5 +70,4 @@ exports.now = now;
 exports.toDate = toDate;
 exports.toTime = toTime;
 exports.toDateTime = toDateTime;
-
 exports.toTimeAgo = toTimeAgo;

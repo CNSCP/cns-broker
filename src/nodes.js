@@ -57,6 +57,16 @@ function exit() {
   });
 }
 
+// Get all nodes
+function getNodes() {
+  return nodes;
+}
+
+// Get specific node
+function getNode(id) {
+  return nodes[id] || null;
+}
+
 // Set node
 function setNode(id, node) {
   // Removing node?
@@ -64,10 +74,11 @@ function setNode(id, node) {
     delete nodes[id];
   else nodes[id] = node;
 
+  // Reconnect them all
   reconnect();
 }
 
-//
+// Reconnect all nodes
 function reconnect() {
   // First instance?
   if (caching++ === 0)
@@ -89,7 +100,7 @@ function reconnect() {
   });
 }
 
-//
+// Read profiles into cache
 function cacheProfiles() {
   // Read relevant profiles
   var promises = [];
@@ -102,10 +113,10 @@ function cacheProfiles() {
     if (scan !== undefined) {
       // Scan each profile
       for (const profile of scan) {
-        //
+        // Have or use profile?
         if (profile.name !== undefined &&
           (profile.server === id || profile.client === id)) {
-          //
+          // Fetch into cache
           const promise = profiles.cacheProfile(profile.name);
           if (promise !== null) promises.push(promise);
         }
@@ -115,34 +126,34 @@ function cacheProfiles() {
   return Promise.all(promises);
 }
 
-//
+// Connect all nodes
 function connectNodes() {
-  //
-  var ids = [];
+  // Mark changes
+  var changes = [];
 
   for (const id in nodes) {
-    //
+    // Node has profiles?
     const node = nodes[id];
     const scan = node.profiles;
 
     if (scan !== undefined) {
-      //
+      // Scan profiles
       for (const profile of scan) {
-        //
+        // Have or use profile?
         if (profile.name !== undefined &&
           (profile.server === id || profile.client === id))
-          connect(id, node, profile, ids);
+          connect(id, node, profile, changes);
       }
     }
   }
 
-  // Re-publish changes
-  for (const id of ids)
+  // Re-publish any changes
+  for (const id of changes)
     messages.publish(id, nodes[id]);
 }
 
-//
-function connect(id, node, profile, ids) {
+// Connect node
+function connect(id, node, profile, changes) {
   // Get profile definition
   const name = profile.name;
   const definition = profiles.getProfile(name);
@@ -164,83 +175,75 @@ function connect(id, node, profile, ids) {
   // Get version properties
   const properties = version.properties;
 
-  //
+  // Connect server to clients
   if (profile.server === id)
-    connectServer(id, node, profile, name, properties, ids);
+    connectServer(id, node, profile, name, properties, changes);
 
 //  if (node.client === id)
 }
 
-//
-function connectServer(serverId, server, profile, name, properties, ids) {
+// Connect server to clients
+function connectServer(serverId, server, profile, name, properties, changes) {
+  // Add server properties
+  var spub = addProperties(profile, properties);
 
-//  console.log('connect clients of ' + name + ' to server ' + serverId + ' under ' + server.context);
-
-  //
-  var pub = addProperties(profile, properties);
-
-  //
-  for (const id in nodes) {
-    //
-    if (id !== serverId) {
-      //
-      const client = nodes[id];
+  // Look for clients
+  for (const clientId in nodes) {
+    // Ignore this node
+    if (clientId !== serverId) {
+      // Right context?
+      const client = nodes[clientId];
 
       if (client.context === server.context) {
-        //
+        // Client has profiles?
         const scan = client.profiles;
 
         if (scan !== undefined) {
-          //
+          // Scan client node profiles
           for (const p of scan) {
-            //
-            if (p.name === name &&
-              p.client === id) {
+            // Client profile?
+            if (p.name === name && p.client === clientId) {
+              // Add client properties
+              var cpub = addProperties(p, properties, profile);
 
-//console.log('found ' + id + ' with ' + name);
+              // Client connected?
+              var pro = locate(server, name, 'client', clientId);
 
-var pro = locate(server, name, 'client', id);
-if (pro === null) {
-  pro = {
-    name: name,
-    client: id
-  };
-  server.profiles.push(pro);
-  pub = true;
+              if (pro === null) {
+                // No, add client connection
+                pro = {
+                  name: name,
+                  client: clientId
+                };
 
-//console.log('adding ' + name + ' client ' + id + ' to ' + serverId);
-}
+                server.profiles.push(pro);
+                spub = true;
+              }
 
-if (addProperties(pro, properties, p))
-  pub = true;
+              // Add server properties to client
+              if (addProperties(pro, properties, p))
+                spub = true;
 
-//if (addProperties(profile, definition, p) > 0)
-//  pub = true;
+              // Server connected?
+              var prr = locate(client, name, 'server', serverId);
 
+              if (prr === null) {
+                // No, add server connection
+                prr = {
+                  name: name,
+                  server: serverId
+                };
 
-var xpub = false;
-var prr = locate(client, name, 'server', serverId);
-if (prr === null) {
-  prr = {
-    name: name,
-    server: serverId
-  };
-  client.profiles.push(prr);
-  xpub = true;
-}
+                client.profiles.push(prr);
+                cpub = true;
+              }
 
-if (addProperties(prr, properties, profile))
-  xpub = true;
+              // Add client properties to server
+              if (addProperties(prr, properties, profile))
+                cpub = true;
 
-if (addProperties(p, properties, profile))
-  xpub = true;
-
-
-if (xpub) republish(id, ids); //messages.publish(id, client);
-
-
-
-
+              // Republish client node?
+              if (cpub) republish(clientId, changes);
             }
           }
         }
@@ -248,59 +251,64 @@ if (xpub) republish(id, ids); //messages.publish(id, client);
     }
   }
 
-  //
-  if (pub) {
-//nodes[serverId] = server;
-    republish(serverId, ids);
-//    messages.publish(serverId, server);
-
-//console.log('pub ' + serverId + ' as ' + JSON.stringify(server,null,2));
-  }
+  // Republish server node?
+  if (spub) republish(serverId, changes);
 }
 
+// Locate profile in node
 function locate(node, name, type, id) {
+  // Node has profiles?
   const scan = node.profiles;
 
   if (profiles !== undefined) {
+    // Scan profiles
     for (const profile of scan) {
+      // Found profile?
       if (profile.name === name &&
         profile[type] === id) {
         return profile;
       }
     }
   }
-  //console.log('not found ' + name + ' ' + type + ' = ' + id);
   return null;
 }
 
-// Add properties to profile
+// Add definition properties to profile
 function addProperties(profile, properties, defaults) {
   // Mark if profile changed
   var changed = false;
 
-  //
+  // Add property container?
   if (profile.properties === undefined) {
     profile.properties = {};
 //    changed = true;
   }
 
-  // Has any properties?
+  // Definition has properties?
   if (properties !== undefined) {
-    //
+    // What profile type?
     const need = (profile.server !== undefined)?null:undefined;
     const values = (defaults === undefined)?{}:(defaults.properties || {});
 
-    //
+    // Add properties
     for (const property of properties) {
-      //
-      if (property.server === need /*&& property.required === null*/) {
-        //
+      // Valid for server or client?
+      if (property.server === need) {
+        // Get property value
         const name = property.name;
-        const value = profile.properties[name];
 
-        if (value === undefined) {
-          //
-          profile.properties[name] = values[name] || '';
+        const value = values[name];
+        const current = profile.properties[name];
+
+        // Property is required?
+        if (current === undefined && property.required === null) {
+          profile.properties[name] = '';
+          changed = true;
+        }
+
+        // Property has changed?
+        if (defaults && value !== current) {
+          profile.properties[name] = value;
           changed = true;
         }
       }
@@ -310,9 +318,10 @@ function addProperties(profile, properties, defaults) {
 }
 
 // Mark for re-publishing
-function republish(id, ids) {
-  if (!ids.includes(id))
-    ids.push(id);
+function republish(id, changes) {
+  // Add if not already
+  if (!changes.includes(id))
+    changes.push(id);
 }
 
 // Output a message
@@ -336,4 +345,7 @@ exports.init = init;
 exports.start = start;
 exports.exit = exit;
 
+exports.getNodes = getNodes;
+
+exports.getNode = getNode;
 exports.setNode = setNode;

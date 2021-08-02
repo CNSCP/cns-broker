@@ -58,26 +58,22 @@ function init(service, section) {
     if (config.compress !== undefined)
       app.use(compression());
 
+    // Status request
+    app.get('/', (req, res) => status(res));
+
     // Get config
     app.get('/config.js', (req, res) => getConfig(res));
 
     // Serve public
-    if (config.public !== undefined)
-      config.public.split(',').forEach((root) => app.use(express.static(root)));
+    const pub = config.public;
+
+    if (pub !== undefined)
+      pub.split(',').forEach((root) => app.use(express.static(root)));
 
     // All other requests
     app.use((req, res) => fail(res, E_NOTFOUND));
 
     debug('++ server service');
-    resolve();
-  });
-}
-
-// Start service
-function start() {
-  // I promise to
-  return new Promise((resolve, reject) => {
-    // Get services
     resolve();
   });
 }
@@ -138,23 +134,35 @@ function getConfig(res) {
 
   response(res, 200, "const config = {" +
     "version: '" + master.version() + "', " +
-    "environment: '" + capitalize(master.environment()) + "', " +
+    "environment: '" + master.environment() + "', " +
     "protocol: '" + messages.protocol + "', " +
     "host: '" + messages.host + "', " +
     "port: '" + messages.port + "', " +
     "profiles: '" + master.config.profiles.domain + "', " +
     "started: '" + date.toDateTime(started) + "', " +
-    "used: '" + date.toTimeAgo(used) + "'," +
-    "status: 'Running'" +
+    "used: '" + date.toTimeAgo(used) + "', " +
+    "status: 'running'" +
   "};");
-
-  // Set last used
-  used = date.now();
 }
 
-// Caps first letter
-function capitalize(s) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+// Send status response
+function status(res) {
+  // Send status page
+  page(res, 200, 'Status - CNS Broker',
+    '<nav>' +
+      '<h1>CNS Broker</h1>' +
+      '<a ripple selected href="/">Status</a>' +
+      '<a ripple href="/nodes">Nodes</a>' +
+    '</nav>' +
+    '<section>' +
+      '<table>' +
+        '<tr><th>Version</th><td>' + master.version() + '</td></tr>' +
+        '<tr><th>Environment</th><td>' + capitalize(master.environment()) + '</td></tr>' +
+        '<tr><th>Started</th><td>' + date.toDateTime(started) + '</td></tr>' +
+        '<tr><th>Used</th><td>' + date.toTimeAgo(used) + '</td></tr>' +
+        '<tr><th>Status</th><td>Running</td></tr>' +
+      '</table>' +
+    '</section>');
 }
 
 // Send fail response
@@ -175,6 +183,8 @@ function fail(res, e) {
   page(res, status, 'Error - CNS Broker',
     '<nav>' +
       '<h1>CNS Broker - ' + message + '</h1>' +
+      '<a ripple href="/">Status</a>' +
+      '<a ripple href="/nodes">Nodes</a>' +
     '</nav>' +
     '<section>' +
       '<p>Most likely causes:</p>' +
@@ -206,6 +216,7 @@ function page(res, status, title, body) {
 function response(res, status, body) {
   // Set status and send body
   res.status(status).send(body);
+  used = date.now();
 }
 
 // Create exception
@@ -215,6 +226,11 @@ function exception(status, message) {
   e.status = status;
 
   return e;
+}
+
+// Caps first letter
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 // Output a message
@@ -235,7 +251,6 @@ function error(text) {
 // Exports
 
 exports.init = init;
-exports.start = start;
 exports.run = run;
 exports.term = term;
 exports.exit = exit;
