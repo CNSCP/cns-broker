@@ -78,6 +78,14 @@ pre {
   margin: 0 0 16px 0;
 }
 
+img[image] {
+  float: right;
+  object-fit: contain;
+  margin: 0 0 10px 10px;
+  width: 100px;
+  height: 50px;
+}
+
 mark {
   font-size: 0;
   display: inline-block;
@@ -113,6 +121,11 @@ table {
   border-collapse: collapse;
   margin-bottom: 16px;
   max-width: 700px;
+}
+
+table table {
+  background-color: rgba(0, 0, 0, 0.02);
+  margin-bottom: 0;
 }
 
 table tr {
