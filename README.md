@@ -13,6 +13,10 @@
 
 `cns-broker` is a [Node.js](https://en.wikipedia.org/wiki/Node.js) application providing an [mqtt](https://en.wikipedia.org/wiki/MQTT) service used to connect `cns-node` modules together using connection profiles. `cns-broker` works on any POSIX-compliant shell (sh, dash, ksh, zsh, bash), in particular on these platforms: unix, linux, macOS, and Windows WSL.
 
+## Docker
+
+This application can be built and run inside of docker. Simply run `docker-compose up` and it will build and run the broker image.
+
 ## Installing
 
 To **install** or **update** the `cns-broker`, you should fetch the latest version from this Git repository. To do that, you may either download and unpack the repo zip file, or clone the repo using:
@@ -38,6 +42,8 @@ npm run start
 ```
 
 To shut down the `cns-broker`, hit `ctrl-c`.
+
+The status page of `cns-broker` is defaulted to port 4040. Browsing to `localhost:4040` should give you a status page. WebSocket communication happens over port 9001 by default. You can change this from inside of [./config.json](./config.json)
 
 ## Maintainers
 
