@@ -1,9 +1,6 @@
 #
 # The following YAML is configured to build a container inside padi-staging
-# GCP project. 
-#
-# The Cloud Run instance of this container is build in Cloud Run via the 
-# Dockerfile and not this file.
+# GCP project. Overwrite the following values in the pipeline
 #
 
 ---
