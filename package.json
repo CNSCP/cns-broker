@@ -8,7 +8,7 @@
   "scripts": {
     "production": "node index --production",
     "staging": "node index --staging",
-    "start": "node index --staging --verbose --host 0.0.0.0 --port 4040",
+    "start": "node index --staging --verbose --host 0.0.0.0 --port 4041",
     "stop": "killall node"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "aedes-server-factory": "^0.2.1",
     "colors": "^1.4.0",
     "compression": "^1.7.4",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "mqtt": "^4.2.8"
   }
 }

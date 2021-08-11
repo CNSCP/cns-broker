@@ -27,7 +27,7 @@
   <!-- Nodes view -->
   <section name="nodes">
     <center id="offline"><div>
-      <mark primary><span>Broker not connected</span></mark>
+      <mark primary><span>Offline</span></mark>
     </div></center>
 
     <table hidden grid id="online">
@@ -98,20 +98,20 @@ function problem(msg) {
 
 // Connect to broker
 function connect() {
+  // Construct server uri
+  const prot = (config.protocol || 'ws') + '://';
+  const host = window.location.host;
+  const port = (config.port === undefined)?'':(':' + config.port);
+
+  const uri = prot + host + port;
+
   debug('connecting...');
 
-  // Connect where?
-  const protocol = config.protocol;
-  const host = window.location.host;
-  const port = config.port;
-
-  const url = protocol + '://' + host + ':' + port;
-
   // Connect client
-  client = mqtt.connect(url)
+  client = mqtt.connect(uri)
   // Connection established
   .on('connect', () => {
-    debug('<> messages connect');
+    debug('>> messages connect');
     topics = {};
     update();
   })

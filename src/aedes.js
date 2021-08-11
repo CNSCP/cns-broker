@@ -32,7 +32,7 @@ function init(service, section) {
     app = aedes(config)
     // Client connect
     .on('clientReady', (client) => {
-      debug('>> messages connect ' + client.id);
+      debug('<> messages connect ' + client.id);
     })
     // Client publish
     .on('publish', (packet, client) => {
@@ -77,7 +77,7 @@ function init(service, section) {
     })
     // Client disconnect
     .on('clientDisconnect', (client) => {
-      debug('>> messages disconnect ' + client.id);
+      debug('>< messages disconnect ' + client.id);
     })
     // Client error
     .on('clientError', (client, e) => {
