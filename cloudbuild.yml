@@ -29,6 +29,6 @@ steps:
 
 substitutions:
   _TAG: latest
-  _APP_NAME: "cnscp-broker"
+  _APP_NAME: "cnscp-broker-demo"
   _GCR_PROJ: "padi-staging"
   _GCR_IMAGE: "gcr.io/${_GCR_PROJ}/${_APP_NAME}"
