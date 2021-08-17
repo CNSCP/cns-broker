@@ -1,0 +1,12 @@
+# Commented values are defaults
+---
+deployment:
+  containerPort: 8080
+  image: nginx
+  # tag: latest
+  # replicas: 1
+  # imagePullPolicy: "Always"
+
+service:
+  portName: "cns-broker-port"
+  # protocol: "TCP"

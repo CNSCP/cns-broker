@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+spec:
+  replicas: {{ .Values.deployment.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.deployment.imagePullPolicy | default "Always" }}
+        ports:
+          - containerPort: {{ .Values.deployment.containerPort }}
+        # readinessProbe:
+        #   httpGet:
+        #     path: /healthz
+        #     port: 8080
