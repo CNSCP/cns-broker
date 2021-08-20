@@ -348,6 +348,7 @@ nav a {
   line-height: 30px;
   padding: 24px 16px;
   opacity: 0.5;
+  cursor: pointer;
   -webkit-user-drag: none;
   -moz-user-drag: none;
   user-drag: none;

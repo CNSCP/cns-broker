@@ -26,7 +26,7 @@ function init(service, section) {
 
     profiles = {};
 
-    debug('++ profiles service ' + config.domain);
+    debug('++ profiles service ' + config.host);
     resolve();
   });
 }
@@ -62,11 +62,14 @@ function cacheProfile(name) {
   // I promise to
   return new Promise((resolve, reject) => {
     // Send request
-    const url = 'https://' + config.domain + '/' + name;
+    const host = config.host;
+    const path = config.path || '';
+
+    const uri = 'https://' + host + path + '/' + name;
 
     debug('<< profiles GET ' + name);
 
-    const req = https.get(url, (res) => {
+    const req = https.get(uri, (res) => {
       // Get status
       const status = res.statusCode;
       const message = res.statusMessage;

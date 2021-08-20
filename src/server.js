@@ -135,7 +135,9 @@ function getConfig(res) {
   response(res, 200, "const config = {" +
     "version: '" + master.version() + "', " +
     "environment: '" + master.environment() + "', " +
-    "protocol: '" + messages.protocol + "', " +
+    "protocol: 'wss', " +
+    "user: '" + messages.user + "', " +
+    "pass: '" + messages.pass + "', " +
     "host: '" + messages.host + "', " +
     "port: '" + messages.port + "', " +
     "profiles: '" + master.config.profiles.domain + "', " +
@@ -151,8 +153,8 @@ function status(res) {
   page(res, 200, 'Status - CNS Broker',
     '<nav>' +
       '<h1>CNS Broker</h1>' +
-      '<a ripple selected href="/">Status</a>' +
-      '<a ripple href="/nodes">Nodes</a>' +
+      '<a ripple selected>Status</a>' +
+      '<a ripple href="/nodes/">Nodes</a>' +
     '</nav>' +
     '<section>' +
       '<table>' +
@@ -184,7 +186,7 @@ function fail(res, e) {
     '<nav>' +
       '<h1>CNS Broker - ' + message + '</h1>' +
       '<a ripple href="/">Status</a>' +
-      '<a ripple href="/nodes">Nodes</a>' +
+      '<a ripple href="/nodes/">Nodes</a>' +
     '</nav>' +
     '<section>' +
       '<p>Most likely causes:</p>' +
@@ -203,8 +205,8 @@ function page(res, status, title, body) {
     '<!doctype html>' +
     '<html lang="en">' +
       '<head>' +
-      '<meta name="description" content="CNS Broker">' +
-      '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+        '<meta name="description" content="CNS Broker">' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
         '<link type="text/css" rel="stylesheet" href="/main.css"/>' +
         '<title>' + title + '</title>' +
       '</head>' +

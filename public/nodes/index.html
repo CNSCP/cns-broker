@@ -21,7 +21,7 @@
   <nav>
     <h1>CNS Broker</h1>
     <a ripple href="/">Status</a>
-    <a ripple selected href="/nodes">Nodes</a>
+    <a ripple selected>Nodes</a>
   </nav>
 
   <!-- Nodes view -->
@@ -99,61 +99,76 @@ function problem(msg) {
 // Connect to broker
 function connect() {
   // Construct server uri
-  const prot = (config.protocol || 'ws') + '://';
-  const host = window.location.host;
+  const prot = config.protocol || 'wss';
+  const host = config.host;
   const port = (config.port === undefined)?'':(':' + config.port);
 
-  const uri = prot + host + port;
+  const uri = prot + '://' + getAuth() + host + port;
 
   debug('connecting...');
 
-  // Connect client
-  client = mqtt.connect(uri)
-  // Connection established
-  .on('connect', () => {
-    debug('>> messages connect');
-    topics = {};
-    update();
-  })
-  // Topic changed
-  .on('message', (topic, message) => {
-    debug('>> messages pub ' + topic);
-    // Set or remove?
-    if (message.length === 0)
-      delete topics[topic];
-    else topics[topic] = parse(message);
+  try {
+    // Connect client
+    client = mqtt.connect(uri)
+    // Connection established
+    .on('connect', () => {
+      debug('>> messages connect');
+      topics = {};
+      update();
+    })
+    // Topic changed
+    .on('message', (topic, message) => {
+      debug('>> messages pub ' + topic);
+      // Set or remove?
+      if (message.length === 0)
+        delete topics[topic];
+      else topics[topic] = parse(message);
 
-    update();
-  })
-  // Server broke connection
-  .on('disconnect', () => {
-    debug('>< messages disconnect');
-  })
-  // Server went offline
-  .on('offline', () => {
-    debug('>< messages offline');
-  })
-  // Client trying to reconnect
-  .on('reconnect', () => {
-    debug('<< messages reconnect');
-  })
-  // Client closed
-  .on('close', () => {
-    debug('>< messages close');
-    update();
-  })
-  // Client terminated
-  .on('end', () => {
-    debug('>< messages end');
-    client = undefined;
-  })
-  // Failure
-  .on('error', (e) => {
+      update();
+    })
+    // Server broke connection
+    .on('disconnect', () => {
+      debug('>< messages disconnect');
+    })
+    // Server went offline
+    .on('offline', () => {
+      debug('>< messages offline');
+    })
+    // Client trying to reconnect
+    .on('reconnect', () => {
+      debug('<< messages reconnect');
+    })
+    // Client closed
+    .on('close', () => {
+      debug('>< messages close');
+      update();
+    })
+    // Client terminated
+    .on('end', () => {
+      debug('>< messages end');
+      client = undefined;
+    })
+    // Failure
+    .on('error', (e) => {
+      error('client error: ' + e.message);
+    });
+
+    // Subscribe all topics
+    subscribe('#');
+  } catch(e) {
     error('client error: ' + e.message);
-  });
+  }
+}
 
-  // Subscribe all topics
-  subscribe('#');
+// Get server auth
+function getAuth() {
+  const user = config.user;
+  const pass = config.pass;
+
+  if (user === undefined) return '';
+  if (pass === undefined) return user + '@';
+
+  return user + ':' + pass + '@';
 }
 
 // Subscribe to topic

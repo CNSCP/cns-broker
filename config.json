@@ -13,12 +13,15 @@
   ],
   "messages": {
     "module": "mqtt",
-    "protocol": "ws",
-    "host": "0.0.0.0",
-    "port": "9001"
+    "protocol": "mqtt",
+    "host": "mqtt.padi.io",
+    "user": "padi",
+    "pass": "cnscp",
+    "port": "1883"
   },
   "profiles": {
-    "domain": "cp.padi.io/profiles",
+    "host": "cp.padi.io",
+    "path": "/profiles",
     "cache": true
   },
   "server": {

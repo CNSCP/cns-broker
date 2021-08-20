@@ -45,13 +45,13 @@ function run() {
   // I promise to
   return new Promise((resolve, reject) => {
     // Construct server uri
-    const prot = (config.protocol || 'ws') + '://';
+    const prot = config.protocol || 'mqtt';
     const host = config.host;
     const port = (config.port === undefined)?'':(':' + config.port);
 
-    const uri = prot + host + port;
+    const uri = prot + '://' + getAuth() + host + port;
 
-    debug('<> messages on ' + uri);
+    debug('<> messages on ' + host + port);
 
     // Connect client
     client = mqtt.connect(uri)
@@ -93,7 +93,7 @@ function run() {
     });
 
     // Subscribe
-    subscribe('#');
+    subscribe('cns-broker/#');
     resolve();
   });
 }
@@ -126,6 +126,17 @@ function exit() {
   });
 }
 
+// Get server auth
+function getAuth() {
+  const user = config.user;
+  const pass = config.pass;
+
+  if (user === undefined) return '';
+  if (pass === undefined) return user + '@';
+
+  return user + ':' + pass + '@';
+}
+
 // Subscribe to node
 function subscribe(topic) {
   debug('<< messages sub ' + topic);
@@ -140,6 +151,9 @@ function subscribe(topic) {
 
 // Publish node
 function publish(topic, node) {
+  // Is connected?
+  if (!client.connected) return;
+
   debug('<< messages pub ' + topic);
 
   const message = stringify(node);
