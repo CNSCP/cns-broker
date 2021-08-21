@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ .Values.service.broker.name }}
+spec:
+  hosts:
+  - "{{ .Values.service.broker.name }}.staging.padi.io"
+  gateways:
+  - {{ .Values.istio.gateway }}
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: {{ .Values.service.broker.name }}

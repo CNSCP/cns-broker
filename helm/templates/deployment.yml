@@ -19,9 +19,3 @@ spec:
       - name: {{ .Chart.Name }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag | default "latest" }}
         imagePullPolicy: {{ .Values.deployment.imagePullPolicy | default "Always" }}
-        ports:
-          - containerPort: {{ .Values.deployment.containerPort }}
-        # readinessProbe:
-        #   httpGet:
-        #     path: /healthz
-        #     port: 8080

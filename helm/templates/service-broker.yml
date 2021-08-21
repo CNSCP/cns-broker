@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.broker.name }}
+spec:
+  ports:
+    - protocol: {{ .Values.service.protocol | default "TCP" }}
+      name: {{ .Values.service.broker.name }}
+      port: {{ .Values.service.broker.port }}
+  selector:
+    app: {{ .Chart.Name }}
+  type: NodePort
