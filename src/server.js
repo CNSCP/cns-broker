@@ -135,11 +135,11 @@ function getConfig(res) {
   response(res, 200, "const config = {" +
     "version: '" + master.version() + "', " +
     "environment: '" + master.environment() + "', " +
-    "protocol: 'wss', " +
+    "protocol: 'ws', " +
     "user: '" + messages.user + "', " +
     "pass: '" + messages.pass + "', " +
     "host: '" + messages.host + "', " +
-    "port: '" + messages.port + "', " +
+    "port: '8883'," + //"port: '" + messages.port + "', " +
     "profiles: '" + master.config.profiles.domain + "', " +
     "started: '" + date.toDateTime(started) + "', " +
     "used: '" + date.toTimeAgo(used) + "', " +
