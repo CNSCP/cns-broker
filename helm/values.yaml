@@ -1,0 +1,16 @@
+# Commented values are defaults
+---
+deployment:
+  image: gcr.io/padi-staging/cns-broker-aduss
+
+service:
+  protocol: "TCP"
+  broker:
+    port: 9001
+    name: "cns-broker"
+  status:
+    port: 4040
+    name: "cns-broker-status"
+
+istio:
+  gateway: padi-stg-gateway
