@@ -129,18 +129,21 @@ function exit() {
 function getConfig(res) {
   // Construct response
   const messages = master.config.messages;
+  const profiles = master.config.profiles;
+
+  const uri = 'https://' + ptofiles.host + (profiles.path || '') + '/' + name;
 
   res.setHeader("Content-Type", 'text/javascript');
 
   response(res, 200, "const config = {" +
     "version: '" + master.version() + "', " +
     "environment: '" + master.environment() + "', " +
-    "protocol: 'ws', " +
+    "protocol: 'wss', " +
     "user: '" + messages.user + "', " +
     "pass: '" + messages.pass + "', " +
     "host: '" + messages.host + "', " +
     "port: '8883'," + //"port: '" + messages.port + "', " +
-    "profiles: '" + master.config.profiles.domain + "', " +
+    "profiles: '" + uri + "', " +
     "started: '" + date.toDateTime(started) + "', " +
     "used: '" + date.toTimeAgo(used) + "', " +
     "status: 'running'" +
