@@ -131,7 +131,7 @@ function getConfig(res) {
   const messages = master.config.messages;
   const profiles = master.config.profiles;
 
-  const uri = 'https://' + profiles.host + (profiles.path || '') + '/' + name;
+  const uri = 'https://' + profiles.host + (profiles.path || '');
 
   res.setHeader("Content-Type", 'text/javascript');
 
