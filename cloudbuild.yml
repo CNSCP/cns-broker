@@ -1,0 +1,65 @@
+# The following YAML is configured to update deployments in the  padi-staging 
+# Kubernetes cluster. Overwrite the following values in the pipeline to 
+# deploy to Prod cluster:
+#   _GCR_PROJ: padi
+#   _KUBE_CLUSTER: padi-prod
+#
+---
+steps:
+  # `docker build -t gcr.io/GCR_PROJ/APP_NAME:TAG .`
+  - name: "gcr.io/cloud-builders/docker"
+    args: [
+      "build", 
+      "-t", "${_GCR_IMAGE}:${_TAG}", 
+      "."]
+ 
+  # Tag new docker image with SHA 
+  - name: "gcr.io/cloud-builders/docker"
+    args: [
+      "tag",
+      "${_GCR_IMAGE}:${_TAG}",
+      "${_GCR_IMAGE}:$SHORT_SHA"
+    ]
+
+  # Push built images to GCR
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "${_GCR_IMAGE}:${_TAG}"]
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "${_GCR_IMAGE}:$SHORT_SHA"]
+
+  # Deploy to Kubernetes
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    args: [
+      'gcloud',
+      'container',
+      'clusters',
+      'get-credentials',
+      '${_KUBE_CLUSTER}'
+    ]
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=${_KUBE_LOCATION}'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=${_KUBE_CLUSTER}'
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    args: [
+      'kubectl',
+      'set',
+      'image',
+      'deployment',
+      '${_APP_NAME}',
+      "${_APP_NAME}=${_GCR_IMAGE}:${_KUBE_DEPLOY_TAG}"
+    ]
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=${_KUBE_LOCATION}'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=${_KUBE_CLUSTER}'
+
+substitutions:
+  _ENV: "staging"
+  _TAG: latest
+  _APP_NAME: "cns-broker"
+  _GCR_PROJ: "padi-staging"
+  _GCR_IMAGE: "gcr.io/${_GCR_PROJ}/${_APP_NAME}"
+  _KUBE_DEPLOY_TAG: "${SHORT_SHA}"
+  _KUBE_LOCATION: us-central1-c
+  _KUBE_CLUSTER: padi-staging
