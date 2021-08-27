@@ -1,7 +1,7 @@
 {
   "environment": "staging",
   "messages": {
-    "host": "mqtt.staging.padi.io"
+    "host": "cns.staging.padi.io"
   },
   "profiles": {
     "host": "cp.staging.padi.io"
