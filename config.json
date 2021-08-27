@@ -13,8 +13,8 @@
   ],
   "messages": {
     "module": "mqtt",
-    "protocol": "mqtt",
-    "host": "mqtt.padi.io",
+    "protocol": "mqtts",
+    "host": "cns.padi.io",
     "user": "padi",
     "pass": "cnscp",
     "port": "1883"
