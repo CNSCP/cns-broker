@@ -1,71 +1,6 @@
-<!doctype html>
+// node.js - Nodes list
+// Copyright 2021 Padi, Inc. All Rights Reserved.
 
-<!-- index.html - CNS Broker -->
-<!-- Copyright 2021 Padi, Inc. All Rights Reserved. -->
-
-<html lang="en">
-<head>
-  <meta name="description" content="CNS Broker">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <link rel="stylesheet" href="/main.css">
-
-  <script src="/config.js"></script>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-
-  <title>CNS Broker</title>
-</head>
-
-<body>
-  <!-- View navigation -->
-  <nav>
-    <h1>CNS Broker</h1>
-    <a ripple href="/">Status</a>
-    <a ripple selected>Nodes</a>
-  </nav>
-
-  <!-- Nodes view -->
-  <section name="nodes">
-    <center id="offline"><div>
-      <mark primary><span>Offline</span></mark>
-    </div></center>
-
-    <table hidden grid id="online">
-    <tr>
-      <th>Context</th>
-      <th>Nodes</th>
-      <th>Properties</th>
-      <th>Profiles</th>
-      <th id="heading1">Server</th>
-      <th>Connections</th>
-      <th id="heading2">Client</th>
-    </tr>
-    <tr>
-      <td><ol id="contexts"></ol></td>
-      <td><ol id="nodes"></ol></td>
-      <td><ul id="properties0"></ul></td>
-      <td><ol id="profiles"></ol></td>
-      <td><ul id="properties1"></ul></td>
-      <td><ol id="connections"></ol></td>
-      <td><ul id="properties2"></ul></td>
-    </tr>
-    </table>
-  </section>
-
-  <!-- Problem view -->
-  <section hidden name="problem">
-    <p>Most likely causes:</p>
-    <ul>
-      <li>There might be a typing error in the page's URL</li>
-      <li>The page may have been removed or had its URL changed</li>
-      <li>The page may be temporarily offline</li>
-    </ul>
-  </section>
-
-</body>
-</html>
-
-<script>
 (function() {
 
 // Local data
@@ -105,25 +40,41 @@ function connect() {
 
   const uri = prot + '://' + getAuth() + host + port;
 
+  debug('<> messages on ' + host + port);
+  debug('<> messages root ' + getTopic());
+
   debug('connecting...');
+
+  var attempts = 0;
 
   try {
     // Connect client
     client = mqtt.connect(uri)
     // Connection established
     .on('connect', () => {
-      debug('>> messages connect');
+      debug('<> messages connect ' + client.options.clientId);
+
+      // Initial state
       topics = {};
       update();
+
+      // First attempt?
+      if (attempts++ === 0)
+        subscribe('#');
     })
     // Topic changed
     .on('message', (topic, message) => {
-      debug('>> messages pub ' + topic);
-      // Set or remove?
-      if (message.length === 0)
-        delete topics[topic];
-      else topics[topic] = parse(message);
+      // Get id from topic
+      const id = getId(topic);
 
+      // Remove topic?
+      if (message.length === 0)
+        delete topics[id];
+      else topics[id] = parse(message);
+
+      debug('>> messages pub ' + id);
+
+      // Update changes
       update();
     })
     // Server broke connection
@@ -152,9 +103,6 @@ function connect() {
     .on('error', (e) => {
       error('client error: ' + e.message);
     });
-
-    // Subscribe all topics
-    subscribe('#');
   } catch(e) {
     error('client error: ' + e.message);
   }
@@ -172,13 +120,42 @@ function getAuth() {
 }
 
 // Subscribe to topic
-function subscribe(topic) {
-  debug('<< messages sub ' + topic);
+function subscribe(id) {
+  const topic = getTopic(id);
+  debug('<< messages sub ' + id);
 
   client.subscribe(topic, {
     rap: true,
     rh: true
   });
+}
+
+// Get topic from id
+function getTopic(id) {
+  const path = [];
+
+  const root = config.root || '';
+  const ident = config.ident || '';
+  const name = id || '';
+
+  if (root !== '') path.push(root);
+  if (ident !== '') path.push(ident);
+  if (name !== '') path.push(name);
+
+  return path.join('/');
+}
+
+// Get id from topic
+function getId(topic) {
+  const path = topic.split('/');
+
+  const root = config.root || '';
+  const ident = config.ident || '';
+
+  if (root !== '') path.shift();
+  if (ident !== '') path.shift();
+
+  return path.join('/');
 }
 
 // Start nodes view
@@ -216,7 +193,7 @@ function update() {
     const name = node.name;
     const scan = node.profiles;
 
-    var attr = ' topic="' + topic + '" context="' + context + '"';
+    var attr = ' context="' + context + '"';
 
     // Add context
     if (!already.includes(context)) {
@@ -225,7 +202,7 @@ function update() {
     }
 
     // Add node
-    attr += ' node="' + name + '"';
+    attr = ' topic="' + topic + '"' + attr + ' node="' + name + '"';
     nodes += '<li' + attr + '>' + name + '</li>';
 
     // Has profiles?
@@ -359,15 +336,15 @@ function filter() {
   const type = selection.type;
   const connection = selection.connection;
 
-  // No topic?
-  if (topic === null) return;
-
   // Select context
   if (context === null) return;
   var attr = '[context="' + context + '"]';
 
   $$('#contexts li' + attr).forEach((e) => attribute(e, 'selected', ''));
   $$('#nodes li' + attr).forEach((e) => show(e));
+
+  // No topic?
+  if (topic === null) return;
 
   // Select node
   if (node === null) return;
@@ -569,4 +546,3 @@ function error(msg) {
 main();
 
 } ());
-</script>

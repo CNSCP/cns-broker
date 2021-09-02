@@ -17,7 +17,15 @@
     "host": "cns.padi.io",
     "user": "padi",
     "pass": "cnscp",
-    "port": "1883"
+    "port": "1883",
+    "root": "cns",
+    "subscribe": {
+      "qos": 0,
+      "rap": true
+    },
+    "publish": {
+      "retain": true
+    }
   },
   "profiles": {
     "host": "cp.padi.io",
