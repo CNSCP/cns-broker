@@ -61,8 +61,9 @@ function init(service, section) {
     // Status request
     app.get('/', (req, res) => status(res));
 
-    // Get config
-    app.get('/config.js', (req, res) => getConfig(res));
+    // Get node list
+    const root = master.config.messages.root || 'nodes';
+    app.get('/' + root + '/:ident', (req, res) => getNodes(req, res));
 
     // Serve public
     const pub = config.public;
@@ -125,29 +126,74 @@ function exit() {
   });
 }
 
-// Send config response
-function getConfig(res) {
-  // Construct response
+// Get nodes list
+function getNodes(req, res) {
+  // Get config
   const messages = master.config.messages;
   const profiles = master.config.profiles;
 
+  const root = messages.root || '';
+  const ident = req.params.ident;
+
   const uri = 'https://' + profiles.host + (profiles.path || '');
 
-  res.setHeader("Content-Type", 'text/javascript');
+  const scripts =
+    '<script>' +
+      "const config = {" +
+        "version: '" + master.version() + "', " +
+        "environment: '" + master.environment() + "', " +
+        "protocol: 'wss', " +
+        "user: '" + messages.user + "', " +
+        "pass: '" + messages.pass + "', " +
+        "host: '" + messages.host + "', " +
+        "port: '8883', " +
+        "root: '" + root + "', " +
+        "ident: '" + ident + "', " +
+        "profiles: '" + uri + "'" +
+      "};" +
+    '</script>' +
+    '<script src="/mqtt.js"></script>' +
+    '<script src="/nodes.js"></script>';
 
-  response(res, 200, "const config = {" +
-    "version: '" + master.version() + "', " +
-    "environment: '" + master.environment() + "', " +
-    "protocol: 'wss', " +
-    "user: '" + messages.user + "', " +
-    "pass: '" + messages.pass + "', " +
-    "host: '" + messages.host + "', " +
-    "port: '8883'," + //"port: '" + messages.port + "', " +
-    "profiles: '" + uri + "', " +
-    "started: '" + date.toDateTime(started) + "', " +
-    "used: '" + date.toTimeAgo(used) + "', " +
-    "status: 'running'" +
-  "};");
+  // Construct page
+  page(res, 200, 'Nodes - CNS Broker',
+    '<nav>' +
+      '<h1>CNS Broker</h1>' +
+    '</nav>' +
+    '<section name="nodes">' +
+      '<center id="offline"><div>' +
+        '<mark primary><span>Offline</span></mark>' +
+      '</div></center>' +
+      '<table hidden grid id="online">' +
+      '<tr>' +
+        '<th>Context</th>' +
+        '<th>Nodes</th>' +
+        '<th>Properties</th>' +
+        '<th>Profiles</th>' +
+        '<th id="heading1">Server</th>' +
+        '<th>Connections</th>' +
+        '<th id="heading2">Client</th>' +
+      '</tr>' +
+      '<tr>' +
+        '<td><ol id="contexts"></ol></td>' +
+        '<td><ol id="nodes"></ol></td>' +
+        '<td><ul id="properties0"></ul></td>' +
+        '<td><ol id="profiles"></ol></td>' +
+        '<td><ul id="properties1"></ul></td>' +
+        '<td><ol id="connections"></ol></td>' +
+        '<td><ul id="properties2"></ul></td>' +
+      '</tr>' +
+      '</table>' +
+    '</section>' +
+    '<section hidden name="problem">' +
+      '<p>Most likely causes:</p>' +
+      '<ul>' +
+        "<li>There might be a typing error in the page's URL</li>" +
+        '<li>The page may have been removed or had its URL changed</li>' +
+        '<li>The page may be temporarily offline</li>' +
+      '</ul>' +
+    '</section>',
+    scripts);
 }
 
 // Send status response
@@ -156,8 +202,6 @@ function status(res) {
   page(res, 200, 'Status - CNS Broker',
     '<nav>' +
       '<h1>CNS Broker</h1>' +
-      '<a ripple selected>Status</a>' +
-      '<a ripple href="/nodes/">Nodes</a>' +
     '</nav>' +
     '<section>' +
       '<table>' +
@@ -188,8 +232,6 @@ function fail(res, e) {
   page(res, status, 'Error - CNS Broker',
     '<nav>' +
       '<h1>CNS Broker - ' + message + '</h1>' +
-      '<a ripple href="/">Status</a>' +
-      '<a ripple href="/nodes/">Nodes</a>' +
     '</nav>' +
     '<section>' +
       '<p>Most likely causes:</p>' +
@@ -202,7 +244,7 @@ function fail(res, e) {
 }
 
 // Send page response
-function page(res, status, title, body) {
+function page(res, status, title, body, scripts) {
   // Construct page
   response(res, status,
     '<!doctype html>' +
@@ -214,6 +256,7 @@ function page(res, status, title, body) {
         '<title>' + title + '</title>' +
       '</head>' +
       '<body>' + body + '</body>' +
+      (scripts || '') +
     '</html>');
 }
 

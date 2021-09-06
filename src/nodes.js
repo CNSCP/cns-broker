@@ -11,7 +11,7 @@ var config;
 var messages;
 var profiles;
 
-var nodes;
+var idents;
 var caching;
 
 // Local functions
@@ -24,7 +24,7 @@ function init(service, section) {
     master = service;
     config = section;
 
-    nodes = {};
+    idents = {};
     caching = 0;
 
     debug('++ nodes service');
@@ -57,35 +57,45 @@ function exit() {
   });
 }
 
-// Get all nodes
-function getNodes() {
-  return nodes;
-}
-
 // Get specific node
 function getNode(id) {
-  return nodes[id] || null;
+  const nodes = idents[id.ident];
+
+  if (nodes !== undefined)
+    return nodes[id.name] || null;
+
+  return null;
 }
 
 // Set node
 function setNode(id, node) {
+  const ident = id.ident;
+  const name = id.name;
+
+  var nodes = idents[ident];
+
+  if (nodes === undefined) {
+    nodes = {};
+    idents[ident] = nodes;
+  }
+
   // Removing node?
   if (node === undefined)
-    delete nodes[id];
-  else nodes[id] = node;
+    delete nodes[name];
+  else nodes[name] = node;
 
   // Reconnect them all
-  reconnect();
+  reconnect(ident, nodes);
 }
 
 // Reconnect all nodes
-function reconnect() {
+function reconnect(ident, nodes) {
   // First instance?
   if (caching++ === 0)
     profiles.cacheStart();
 
   // Resolve profiles
-  cacheProfiles()
+  cacheProfiles(nodes)
   // Failure
   .catch((e) => {
     error('caching error: ' + e.message);
@@ -94,14 +104,14 @@ function reconnect() {
   .finally((result) => {
     // Reconnect if last in queue
     if (caching > 0) caching--;
-    if (caching === 0) connectNodes();
+    if (caching === 0) connectNodes(ident, nodes);
 
     return null;
   });
 }
 
 // Read profiles into cache
-function cacheProfiles() {
+function cacheProfiles(nodes) {
   // Read relevant profiles
   var promises = [];
 
@@ -127,7 +137,7 @@ function cacheProfiles() {
 }
 
 // Connect all nodes
-function connectNodes() {
+function connectNodes(ident, nodes) {
   // Mark changes
   var changes = [];
 
@@ -142,18 +152,20 @@ function connectNodes() {
         // Have or use profile?
         if (profile.name !== undefined &&
           (profile.server === id || profile.client === id))
-          connect(id, node, profile, changes);
+          connect(id, node, nodes, profile, changes);
       }
     }
   }
 
   // Re-publish any changes
-  for (const id of changes)
-    messages.publish(id, nodes[id]);
+  for (const name of changes) {
+    const id = {ident: ident, name: name};
+    messages.publish(id, nodes[name]);
+  }
 }
 
 // Connect node
-function connect(id, node, profile, changes) {
+function connect(id, node, nodes, profile, changes) {
   // Get profile definition
   const name = profile.name;
   const definition = profiles.getProfile(name);
@@ -177,13 +189,11 @@ function connect(id, node, profile, changes) {
 
   // Connect server to clients
   if (profile.server === id)
-    connectServer(id, node, profile, name, properties, changes);
-
-//  if (node.client === id)
+    connectServer(id, node, nodes, profile, name, properties, changes);
 }
 
 // Connect server to clients
-function connectServer(serverId, server, profile, name, properties, changes) {
+function connectServer(serverId, server, nodes, profile, name, properties, changes) {
   // Add server properties
   var spub = addProperties(profile, properties);
 
@@ -344,8 +354,6 @@ function error(text) {
 exports.init = init;
 exports.start = start;
 exports.exit = exit;
-
-exports.getNodes = getNodes;
 
 exports.getNode = getNode;
 exports.setNode = setNode;
