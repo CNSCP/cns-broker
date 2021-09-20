@@ -186,6 +186,12 @@ function publish(id, node) {
 
 // Get topic from id
 function getTopic(id) {
+  // Load root topic from ENV if present.
+  if (process.env.MQTT_ROOT_TOPIC) {
+    debug('<> Loading root MQTT topic from ENV Var')
+    return process.env.MQTT_ROOT_TOPIC
+  }
+
   const path = [];
 
   const root = config.root || '';

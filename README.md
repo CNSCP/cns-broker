@@ -45,6 +45,10 @@ To shut down the `cns-broker`, hit `ctrl-c`.
 
 The status page of `cns-broker` is defaulted to port 4040. Browsing to `localhost:4040` should give you a status page. WebSocket communication happens over port 9001 by default. You can change this from inside of [./config.json](./config.json)
 
+### Environment Variables
+
+* `MQTT_ROOT_TOPIC` => The root topic the MQTT service should connect to. Overrides any other configuration.
+
 ## Maintainers
 
 ## License
