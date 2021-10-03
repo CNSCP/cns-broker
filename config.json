@@ -20,6 +20,7 @@
     "port": "1883",
     "root": "cns",
     "subscribe": {
+      "topic": "#",
       "qos": 0,
       "rap": true
     },
