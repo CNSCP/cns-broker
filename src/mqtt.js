@@ -66,9 +66,16 @@ function run() {
     .on('connect', () => {
       debug('<> messages connect ' + client.options.clientId);
 
+      // Set subscription topic from config, otherwise default to '#'
+      var subscription_topic = config.subscribe.topic || "#"
+      if (process.env.MQTT_SUBSCRIBE_TOPIC) {
+        subscription_topic = process.env.MQTT_SUBSCRIBE_TOPIC
+        debug('<> Loading MQTT subscribe topic from ENV Var: "' + subscription_topic + '"')
+      }
+
       // First attempt?
       if (attempts++ === 0)
-        subscribe('#');
+        subscribe(subscription_topic);
     })
     // Topic changed
     .on('message', (topic, message, packet) => {

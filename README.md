@@ -48,6 +48,7 @@ The status page of `cns-broker` is defaulted to port 4040. Browsing to `localhos
 ### Environment Variables
 
 * `MQTT_ROOT_TOPIC` => The root topic the MQTT service should connect to. Overrides any other configuration.
+* `MQTT_SUBSCRIBE_TOPIC` => The topic which the broker should subscribe to. Overrides any other configuration.
 
 ## Maintainers
 
