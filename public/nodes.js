@@ -24,7 +24,7 @@ function main() {
 
 // Show problem view
 function problem(msg) {
-  document.title = 'Error - CNS Broker';
+  title('Error');
   text('nav h1', 'CNS Broker - ' + msg);
 
   hide('section[name="nodes"]');
@@ -450,6 +450,11 @@ function stringify(packet) {
     error('stringify error: ' + e.message);
   }
   return null;
+}
+
+// Set document title
+function title(page) {
+  document.title = page + ' - CNS Broker';
 }
 
 // Show element
