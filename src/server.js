@@ -152,7 +152,7 @@ function getNodes(req, res) {
         "profiles: '" + uri + "'" +
       "};" +
     '</script>' +
-    '<script src="/mqtt.js"></script>' +
+    '<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>' +
     '<script src="/nodes.js"></script>';
 
   // Construct page
