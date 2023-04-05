@@ -112,14 +112,11 @@ function term() {
     // Now terminating
     terminating = true;
 
-    // Catch app close
-    client.on('end', () => {
-      debug('>< messages closed');
-      resolve();
-    });
-
     // Close client
     client.end();
+
+    debug('>< messages closed');
+    resolve();
   });
 }
 

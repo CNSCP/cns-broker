@@ -12,12 +12,12 @@
     "server"
   ],
   "messages": {
-    "module": "mqtt",
-    "protocol": "mqtts",
-    "host": "cns.padi.io",
-    "user": "padi",
+    "module": "aedes",
+    "protocol": "mqtt",
+    "host": "localhost",
+    "port": "1881",
+    "user": "guest",
     "pass": "cnscp",
-    "port": "1883",
     "root": "cns",
     "subscribe": {
       "qos": 0,
@@ -33,7 +33,7 @@
     "cache": true
   },
   "server": {
-    "host": "0.0.0.0",
+    "host": "localhost",
     "port": "8080",
     "public": "public",
     "compress": "gzip"

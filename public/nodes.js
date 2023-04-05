@@ -304,7 +304,7 @@ function select(e) {
 // Open external link
 function external(e) {
   if (selection.profile !== undefined)
-    window.open('https://' + config.profiles + '/' + selection.profile);
+    window.open(config.profiles + '/' + selection.profile);
 }
 
 // Filter selection

@@ -40,26 +40,29 @@ function init(service, section) {
       if (client === null) return;
 
       // Node id is topic
-      const id = packet.topic;
+      const topic = packet.topic;
+      const payload = packet.payload;
+
+      const id = getId(topic);
 
       // Ignore internal publish
       if (packet.internal) {
-        debug('<< messages pub ' + id);
+        debug('<< messages pub ' + topic);
         return;
       }
 
       // Removing topic?
-      if (packet.payload.length === 0) {
-        debug('>> messages remove ' + id);
+      if (payload.length === 0) {
+        debug('>> messages remove ' + topic);
         nodes.setNode(id);
         return;
       }
 
       // Client publish
-      debug('>> messages pub ' + id);
+      debug('>> messages pub ' + topic);
 
       // Failed to parse?
-      const node = parse(packet.payload);
+      const node = parse(payload);
       if (node === null) return;
 
       // Add node
@@ -165,6 +168,8 @@ function exit() {
 // Publish node
 function publish(id, node) {
   // Get payload
+  const topic = getTopic(id);
+
   const packet = stringify(node);
   if (packet === null) return;
 
@@ -175,7 +180,7 @@ function publish(id, node) {
     cmd: 'publish',
     internal: true,
     retain: true,
-    topic: id,
+    topic: topic,
     qos: 0,
     payload: payload
   }, (e) => {
@@ -183,6 +188,37 @@ function publish(id, node) {
     if (e !== null)
       error('publish error: ' + e.message);
   });
+}
+
+// Get topic from id
+function getTopic(id) {
+  const path = [];
+
+  const root = config.root || '';
+  const ident = (id === undefined)?'':(id.ident || '');
+  const name = (id === undefined)?'':(id.name || '');
+
+  if (root !== '') path.push(root);
+  if (ident !== '') path.push(ident);
+  if (name !== '') path.push(name);
+
+  return path.join('/');
+}
+
+// Get id from topic
+function getId(topic) {
+  const path = topic.split('/');
+
+  const root = config.root || '';
+  if (root !== '') path.shift();
+
+  const ident = path.shift();
+  const name = path.join('/');
+
+  return {
+    ident: ident,
+    name: name
+  };
 }
 
 // Parse json packet

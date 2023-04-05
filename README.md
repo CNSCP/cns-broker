@@ -11,7 +11,7 @@
 
 ## About
 
-This project contains a [Node.js](https://en.wikipedia.org/wiki/Node.js) application providing an [mqtt](https://en.wikipedia.org/wiki/MQTT) service used to connect `cns-node` modules together using connection profiles. The application works on any POSIX-compliant shell (sh, dash, ksh, zsh, bash), in particular on these platforms: unix, linux, macOS, and Windows WSL.
+This project contains a [Node.js](https://en.wikipedia.org/wiki/Node.js) application providing an [mqtt](https://en.wikipedia.org/wiki/MQTT) service used to connect node contexts together using connection profiles. The application works on any POSIX-compliant shell (sh, dash, ksh, zsh, bash), in particular on these platforms: unix, linux, macOS, and Windows WSL.
 
 ## Installing
 
@@ -40,10 +40,6 @@ npm run start
 To shut down the application, hit `ctrl-c`.
 
 The status page of the application is defaulted to port 4040. Browsing to `localhost:4040` should give you a status page. WebSocket communication happens over port 9001 by default. You can change this from inside of [./config.json](./config.json)
-
-### Docker
-
-This application can be built and run inside of docker. Simply run `docker-compose up` and it will build and run the broker image.
 
 ## Maintainers
 
