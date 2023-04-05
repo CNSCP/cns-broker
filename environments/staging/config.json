@@ -1,8 +1,5 @@
 {
   "environment": "staging",
-  "messages": {
-    "host": "cns.staging.padi.io"
-  },
   "profiles": {
     "host": "cp.staging.padi.io"
   },

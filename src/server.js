@@ -22,6 +22,8 @@ var config;
 var app;
 var server;
 
+var nodes;
+
 var started = date.now();
 var used = date.now();
 
@@ -59,11 +61,11 @@ function init(service, section) {
       app.use(compression());
 
     // Status request
-    app.get('/', (req, res) => status(res));
-
-    // Get node list
     const root = master.config.messages.root || 'nodes';
-    app.get('/' + root + '/:ident', (req, res) => getNodes(req, res));
+
+    app.get('/', (req, res) => status(res));
+    app.get('/nodes', (req, res) => getNodes(req, res));
+    app.get('/' + root + '/:ident', (req, res) => getNode(req, res));
 
     // Serve public
     const pub = config.public;
@@ -75,6 +77,16 @@ function init(service, section) {
     app.use((req, res) => fail(res, E_NOTFOUND));
 
     debug('++ server service');
+    resolve();
+  });
+}
+
+// Start service
+function start() {
+  // I promise to
+  return new Promise((resolve, reject) => {
+    // Get services
+    nodes = master.find('nodes');
     resolve();
   });
 }
@@ -121,6 +133,8 @@ function exit() {
     app = undefined;
     server = undefined;
 
+    nodes = undefined;
+
     debug('-- server service');
     resolve();
   });
@@ -128,12 +142,62 @@ function exit() {
 
 // Get nodes list
 function getNodes(req, res) {
+  // Create table
+  const idents = nodes.getIdents();
+  const root = master.config.messages.root || 'nodes';
+
+  var table = '';
+
+  for (const ident in idents) {
+    // Add profile to list
+    const location = '<a href="/' + root + '/' + ident + '">View</a>';
+
+    const node = idents[ident];
+    const count = Object.keys(node).length;
+
+    table +=
+      '<tr>' +
+        '<td>' + ident + '</td>' +
+        '<td>' + count + '</td>' +
+        '<td>' + location + '</td>' +
+      '</tr>';
+  }
+
+  // Send nodes list
+  page(res, 200, 'Nodes - CNS Broker',
+    '<nav>' +
+      '<h1>CNS Broker</h1>' +
+      '<a ripple href="/">Status</a>' +
+      '<a ripple selected>Nodes</a>' +
+    '</nav>' +
+    '<section>' +
+      ((table !== '')?
+      ('<table>' +
+        '<tr>' +
+          '<th>Identity</th>' +
+          '<th>Nodes</th>' +
+          '<th></th>' +
+        '</tr>' +
+        table +
+      '</table>'):
+      '<p>No Nodes</p>') +
+    '</section>');
+}
+
+// Get node list
+function getNode(req, res) {
   // Get config
+  const ident = req.params.ident;
+
   const messages = master.config.messages;
   const profiles = master.config.profiles;
 
-  const root = messages.root || '';
-  const ident = req.params.ident;
+  const host = req.hostname;
+  const port = messages.proxy || messages.port || '1881';
+
+  const user = messages.user || '';
+  const pass = messages.pass || '';
+  const root = messages.root || 'nodes';
 
   const uri = 'https://' + profiles.host + (profiles.path || '');
 
@@ -142,23 +206,25 @@ function getNodes(req, res) {
       "const config = {" +
         "version: '" + master.version() + "', " +
         "environment: '" + master.environment() + "', " +
-        "protocol: 'wss', " +
-        "user: '" + messages.user + "', " +
-        "pass: '" + messages.pass + "', " +
-        "host: '" + messages.host + "', " +
-        "port: '8883', " +
+        "protocol: 'ws', " +
+        "host: '" + host + "', " +
+        "port: '" + port + "', " +
+        "user: '" + user + "', " +
+        "pass: '" + pass + "', " +
         "root: '" + root + "', " +
         "ident: '" + ident + "', " +
         "profiles: '" + uri + "'" +
       "};" +
     '</script>' +
-    '<script src="/mqtt.js"></script>' +
+    '<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>' +
     '<script src="/nodes.js"></script>';
 
   // Construct page
-  page(res, 200, 'Nodes - CNS Broker',
+  page(res, 200, 'Node - CNS Broker',
     '<nav>' +
       '<h1>CNS Broker</h1>' +
+      '<a ripple href="/">Status</a>' +
+      '<a ripple href="/nodes">Nodes</a>' +
     '</nav>' +
     '<section name="nodes">' +
       '<center id="offline"><div>' +
@@ -202,6 +268,8 @@ function status(res) {
   page(res, 200, 'Status - CNS Broker',
     '<nav>' +
       '<h1>CNS Broker</h1>' +
+      '<a ripple selected>Status</a>' +
+      '<a ripple href="/nodes">Nodes</a>' +
     '</nav>' +
     '<section>' +
       '<table>' +
@@ -299,6 +367,7 @@ function error(text) {
 // Exports
 
 exports.init = init;
+exports.start = start;
 exports.run = run;
 exports.term = term;
 exports.exit = exit;

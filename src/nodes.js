@@ -57,12 +57,20 @@ function exit() {
   });
 }
 
+// Get node identities
+function getIdents() {
+  return idents;
+}
+
 // Get specific node
 function getNode(id) {
-  const nodes = idents[id.ident];
+  const ident = id.ident;
+  const name = id.name;
+
+  const nodes = idents[ident];
 
   if (nodes !== undefined)
-    return nodes[id.name] || null;
+    return nodes[name] || null;
 
   return null;
 }
@@ -354,6 +362,8 @@ function error(text) {
 exports.init = init;
 exports.start = start;
 exports.exit = exit;
+
+exports.getIdents = getIdents;
 
 exports.getNode = getNode;
 exports.setNode = setNode;
