@@ -39,7 +39,7 @@ npm run start
 
 To shut down the application, hit `ctrl-c`.
 
-The status page of the application is defaulted to port 4040. Browsing to `localhost:4040` should give you a status page. WebSocket communication happens over port 9001 by default. You can change this from inside of [./config.json](./config.json)
+The status page of the broker is [localhost:8080](http://localhost:8080) by default. MQTT communication happens over port `1881` by default. You can change this and other settings from inside of [config.json](./config.json).
 
 ## Maintainers
 
