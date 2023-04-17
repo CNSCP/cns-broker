@@ -5,7 +5,8 @@
 
 // Imports
 
-const mqtt = require('mqtt');
+const aedes = require('aedes');
+const factory = require('aedes-server-factory');
 
 // Local data
 
@@ -13,9 +14,9 @@ var master;
 var config;
 
 var nodes;
-var client;
 
-var terminating;
+var app;
+var server;
 
 // Local functions
 
@@ -27,7 +28,74 @@ function init(service, section) {
     master = service;
     config = section;
 
-    debug('++ messages service');
+    // Initialize aedes
+    app = aedes(config)
+    // Client connect
+    .on('clientReady', (client) => {
+      debug('<> messages connect ' + client.id);
+    })
+    // Client publish
+    .on('publish', (packet, client) => {
+      // Ignore server publish
+      if (client === null) return;
+
+      // Node id is topic
+      const topic = packet.topic;
+      const payload = packet.payload;
+
+      const id = getId(topic);
+
+      // Ignore internal publish
+      if (packet.internal) {
+        debug('<< messages pub ' + id.name);
+        return;
+      }
+
+      // Removing topic?
+      if (payload.length === 0) {
+        debug('>> messages remove ' + id.name);
+        nodes.setNode(id);
+        return;
+      }
+
+      // Client publish
+      debug('>> messages pub ' + id.name);
+
+      // Failed to parse?
+      const node = parse(payload);
+      if (node === null) return;
+
+      // Add node
+      nodes.setNode(id, node);
+    })
+    // Client subscribe
+    .on('subscribe', (subs, client) => {
+      for (const packet of subs) {
+        const id = getId(packet.topic);
+        debug('>> messages sub ' + id.name);
+      }
+    })
+    // Client unsibscribe
+    .on('unsubscribe', (unsubs, client) => {
+      for (const topic of unsubs) {
+        const id = getId(topic);
+        debug('>> messages unsub ' + id.name);
+      }
+    })
+    // Client disconnect
+    .on('clientDisconnect', (client) => {
+      debug('>< messages disconnect ' + client.id);
+    })
+    // Client error
+    .on('clientError', (client, e) => {
+      error('client error: ' + client.id + ' ' + e.message);
+    })
+    // Connection error
+    .on('connectionError', (client, e) => {
+      error('connection error: ' + client.id + ' ' + e.message);
+    });
+
+    debug('++ messages service mqtt');
     resolve();
   });
 }
@@ -46,59 +114,23 @@ function start() {
 function run() {
   // I promise to
   return new Promise((resolve, reject) => {
-    // Construct server uri
-    const prot = config.protocol || 'mqtt';
+    // Get config
     const host = config.host;
-    const port = (config.port === undefined)?'':(':' + config.port);
+    const port = config.port;
 
-    const uri = prot + '://' + getAuth() + host + port;
-
-    debug('<> messages on ' + host + port);
-    debug('<> messages root ' + getTopic());
-
-    var attempts = 0;
-
-    terminating = false;
-
-    // Connect client
-    client = mqtt.connect(uri)
-    // Connection established
-    .on('connect', () => {
-      debug('<> messages connect ' + client.options.clientId);
-
-      // First attempt?
-      if (attempts++ === 0)
-        subscribe('#');
+    // Start server
+    server = factory.createServer(app, {
+      ws: true
     })
-    // Topic changed
-    .on('message', (topic, message, packet) => {
-      // Ignore if term
-      if (terminating) return;
-
-      // Get id from topic
-      const id = getId(topic);
-
-      // Removing topic?
-      if (packet.payload.length === 0) {
-        debug('>> messages remove ' + id.name);
-        nodes.setNode(id);
-        return;
-      }
-
-      debug('>> messages pub ' + id.name);
-
-      // Set node
-      const node = parse(packet.payload);
-      if (node === null) return;
-
-      nodes.setNode(id, node);
+    // Listen on port
+    .listen(port, host, () => {
+      debug('<> messages on ' + host + ':' + port);
+      resolve();
     })
     // Failure
     .on('error', (e) => {
-      error('client error: ' + e.message);
+      reject(e);
     });
-
-    resolve();
   });
 }
 
@@ -106,17 +138,19 @@ function run() {
 function term() {
   // I promise to
   return new Promise((resolve, reject) => {
-    // Stop subscribing
-    unsubscribe('#');
+    // Catch app close
+    app.on('closed', () => {
+      debug('>< messages closed');
 
-    // Now terminating
-    terminating = true;
+      // Close server
+      if (server !== undefined)
+        server.close();
 
-    // Close client
-    client.end();
+      resolve();
+    });
 
-    debug('>< messages closed');
-    resolve();
+    // Close app
+    app.close();
   });
 }
 
@@ -126,58 +160,37 @@ function exit() {
   return new Promise((resolve, reject) => {
     // Destroy objects
     nodes = undefined;
-    client = undefined;
+
+    app = undefined;
+    server = undefined;
 
     debug('-- messages service');
     resolve();
   });
 }
 
-// Get server auth
-function getAuth() {
-  const user = config.user;
-  const pass = config.pass;
-
-  if (user === undefined) return '';
-  if (pass === undefined) return user + '@';
-
-  return user + ':' + pass + '@';
-}
-
-// Subscribe to node
-function subscribe(id) {
-  if (typeof id === 'string') id = {name: id};
-
-  const topic = getTopic(id);
-  debug('<< messages sub ' + id.name);
-
-  client.subscribe(topic, config.subscribe, (e) => {
-    if (e) error('subscribe error: ' + e.message);
-  });
-}
-
-// Unsubscribe to node
-function unsubscribe(id) {
-  if (typeof id === 'string') id = {name: id};
-
-  const topic = getTopic(id);
-  debug('<< messages unsub ' + id.name);
-
-  client.unsubscribe(topic, config.unsubscribe, (e) => {
-    if (e) error('unsubscribe error: ' + e.message);
-  });
-}
-
 // Publish node
 function publish(id, node) {
+  // Get payload
   const topic = getTopic(id);
-  debug('<< messages pub ' + id.name);
 
-  const message = stringify(node);
-  if (message === null) return;
+  const packet = stringify(node);
+  if (packet === null) return;
 
-  client.publish(topic, message, config.publish, (e) => {
-    if (e) error('publish error: ' + e.message);
+  const payload = Buffer.from(packet);
+
+  // Publish node
+  app.publish({
+    cmd: 'publish',
+    internal: true,
+    retain: true,
+    topic: topic,
+    qos: 0,
+    payload: payload
+  }, (e) => {
+    // Failure
+    if (e !== null)
+      error('publish error: ' + e.message);
   });
 }
 
@@ -223,7 +236,7 @@ function parse(packet) {
 }
 
 // Stringify json packet
-function stringify(packet, format) {
+function stringify(packet) {
   try {
     return JSON.stringify(packet);
   } catch (e) {

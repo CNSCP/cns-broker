@@ -13,8 +13,8 @@ const config = require('./config.json');
 service.start(config, {
   // Command line flags
   flags: [
-    ['--host', 'addr', 'Set broker server host'],
-    ['--port', 'number', 'Set broker server port']
+    ['--host', 'addr', 'Set server host'],
+    ['--port', 'number', 'Set server port']
   ],
   // Process flag
   flag: (flag, value) => {

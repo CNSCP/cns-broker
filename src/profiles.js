@@ -81,7 +81,7 @@ function cacheProfile(name) {
         return resolve(false);
 
       // Collate response
-      var chunks = [];
+      const chunks = [];
 
       res.on('data', (chunk) => chunks.push(chunk));
 

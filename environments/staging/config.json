@@ -2,8 +2,5 @@
   "environment": "staging",
   "profiles": {
     "host": "cp.staging.padi.io"
-  },
-  "server": {
-    "public": "environments/staging/public,public"
   }
 }

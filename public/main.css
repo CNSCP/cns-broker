@@ -5,7 +5,10 @@
 
 @import url(//fonts.googleapis.com/css?family=Roboto:regular,light|Roboto+Mono&display=swap);
 
-html {
+html, body {
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
   height: 100%;
 }
 
@@ -13,16 +16,14 @@ body {
   font-family: "Roboto", "Helvetica", sans-serif;
   font-weight: 200;
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.54);
+  color: #848484;
   margin: 0;
-  height: 100%;
-  overscroll-behavior: none;
 }
 
 h1 {
   font-size: 20px;
   font-weight: 200;
-  color: rgba(0, 0, 0, 0.87);
+  color: #181818;
   line-height: 28px;
   margin: 0 0 16px 0;
 }
@@ -77,136 +78,6 @@ q, blockquote {
 pre {
   font-family: "Roboto Mono", monospace;
   margin: 0 0 16px 0;
-}
-
-img[image] {
-  float: right;
-  object-fit: contain;
-  margin: 0 0 10px 10px;
-  width: 100px;
-  height: 50px;
-}
-
-mark {
-  font-size: 0;
-  display: inline-block;
-  background-color: #dedede;
-  white-space: nowrap;
-  color: rgba(0, 0, 0, 0.87);
-  border-radius: 16px;
-  padding: 0 12px;
-  margin: 2px 0;
-  line-height: 32px;
-  height: 32px;
-}
-
-mark[secondary] {
-  background-color: #2196f3;
-  color: white;
-}
-
-mark[primary] {
-  background-color: #ff4081;
-  color: white;
-}
-
-mark span {
-  font-size: 14px;
-  font-weight: 400;
-  display: inline-block;
-  vertical-align: middle;
-}
-
-table {
-  border: 1px solid #e5e5e5;
-  border-collapse: collapse;
-  margin-bottom: 16px;
-  max-width: 700px;
-}
-
-table table {
-  background-color: rgba(0, 0, 0, 0.02);
-  margin-bottom: 0;
-}
-
-table tr {
-  border-bottom: 1px solid #e5e5e5;
-}
-
-table th {
-  font-size: 12px;
-  font-weight: 600;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  text-align: left;
-  vertical-align: top;
-  padding: 16px 18px;
-}
-
-table td {
-  font-size: 13px;
-  vertical-align: top;
-  padding: 15px 18px;
-}
-
-table td:nth-child(1) {
-  white-space: nowrap;
-}
-
-table td:nth-child(2) {
-  width: 100%;
-}
-
-table th:first-of-type,
-table td:first-of-type,
-table td:first-of-type li {
-  padding-left: 24px;
-}
-
-table td ul,
-table td ol {
-  overflow: scroll;
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
-
-table tr[tabindex]:hover:not(:focus) {
-  background-color: #f9f9f9;
-}
-
-table tr[tabindex]:not(:focus) td table {
-  display: none;
-}
-
-table tr[tabindex]:focus td table {
-  display: table;
-}
-
-table tr[tabindex]:not(:focus) td div {
-  display: inline;
-}
-
-table tr[tabindex]:focus td div {
-  display: none;
-}
-
-table[grid] {
-  table-layout: fixed;
-  margin: 0;
-  max-width: none;
-  min-width: 1024px;
-  width: 100%;
-  height: 100%;
-}
-
-table[grid] td {
-  border-right: 1px solid #e5e5e5;
-  padding: 0;
-  width: 100%;
-  height: calc(100vh - 142px);
 }
 
 ul {
@@ -282,6 +153,203 @@ a {
   outline: none;
 }
 
+nav {
+  font-size: 0;
+  overflow: scroll hidden;
+  white-space: nowrap;
+  box-sizing: border-box;
+  text-align: right;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 16px;
+  height: 61px;
+}
+
+nav h1 {
+  float: left;
+  margin-right: 16px;
+}
+
+nav a {
+  font-size: 14px;
+  font-weight: 600;
+  position: relative;
+  text-decoration: none;
+  text-transform: uppercase;
+  color: black;
+  line-height: 30px;
+  padding: 24px 16px;
+  opacity: 0.5;
+  -webkit-user-drag: none;
+  -moz-user-drag: none;
+  user-drag: none;
+}
+
+nav a:focus,
+nav a:hover,
+nav a[selected] {
+  opacity: 1;
+}
+
+nav a:after {
+  content: '';
+  position: absolute;
+  background-color: transparent;
+  left: 50%;
+  bottom: 3px;
+  width: 0;
+  height: 3px;
+  transition: left 0.25s ease, width 0.25s ease, background-color 0.25s ease;
+}
+
+nav a[selected]:after {
+  background-color: #2196f3;
+  left: 0;
+  width: 100%;
+}
+
+section {
+  overflow: auto;
+  padding: 16px;
+  height: calc(100% - 93px);
+}
+
+center {
+  display: table;
+  width: 100%;
+  height:100%;
+}
+
+center[hidden] {
+  display: none;
+}
+
+center div {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+
+mark {
+  font-size: 0;
+  display: inline-block;
+  background-color: #dedede;
+  white-space: nowrap;
+  color: #181818;
+  border-radius: 16px;
+  padding: 0 12px;
+  margin: 2px 0;
+  line-height: 32px;
+  height: 32px;
+}
+
+mark[secondary] {
+  background-color: #2196f3;
+  color: white;
+}
+
+mark[primary] {
+  background-color: #ff4081;
+  color: white;
+}
+
+mark span {
+  font-size: 14px;
+  font-weight: 400;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+table {
+  border: 1px solid #e5e5e5;
+  border-collapse: collapse;
+  max-width: 700px;
+}
+
+table table {
+  background-color: rgba(0, 0, 0, 0.02);
+  margin-bottom: 0;
+}
+
+table tr {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+table th {
+  font-size: 14px;
+  font-weight: 400;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: left;
+  vertical-align: top;
+  padding: 15px 18px;
+}
+
+table td {
+  font-size: 13px;
+  vertical-align: top;
+  padding: 15px 18px;
+}
+
+table td:nth-child(1) {
+  white-space: nowrap;
+}
+
+table td:nth-child(2) {
+  width: 100%;
+}
+
+table th:first-of-type,
+table td:first-of-type,
+table td:first-of-type li {
+  padding-left: 24px;
+}
+
+table td ul,
+table td ol {
+  overflow: scroll;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+table tr[tabindex]:hover:not(:focus) {
+  background-color: #f9f9f9;
+}
+
+table tr[tabindex]:not(:focus) td table {
+  display: none;
+}
+
+table tr[tabindex]:focus td table {
+  display: table;
+}
+
+table tr[tabindex]:not(:focus) td div {
+  display: inline;
+}
+
+table tr[tabindex]:focus td div {
+  display: none;
+}
+
+table[grid] {
+  table-layout: fixed;
+  margin: 0;
+  max-width: none;
+  min-width: 1024px;
+  width: 100%;
+  height: 100%;
+}
+
+table[grid] td {
+  border-right: 1px solid #e5e5e5;
+  padding: 0;
+  width: 100%;
+  height: calc(100vh - 142px);
+}
+
 button {
   font-family: "Roboto", "Helvetica", sans-serif;
   font-size: 14px;
@@ -294,7 +362,6 @@ button {
   padding: 10px 16px;
   line-height: 16px;
   transition: background-color 0.2s ease;
-  cursor: pointer;
 }
 
 button[secondary] {
@@ -342,82 +409,19 @@ button[raised][disabled] {
   box-shadow: none;
 }
 
-nav {
-  font-size: 0;
-  overflow: scroll hidden;
-  white-space: nowrap;
-  box-sizing: border-box;
-  text-align: right;
-  border-bottom: 1px solid #e5e5e5;
-  padding: 16px;
-  height: 61px;
+/* Anti-selection */
+
+nav,
+mark,
+table th,
+button {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
 }
 
-nav h1 {
-  float: left;
-  margin-right: 16px;
-}
-
-nav a {
-  font-size: 14px;
-  font-weight: 600;
-  position: relative;
-  text-decoration: none;
-  text-transform: uppercase;
-  color: black;
-  line-height: 30px;
-  padding: 24px 16px;
-  opacity: 0.5;
-  cursor: pointer;
-  -webkit-user-drag: none;
-  -moz-user-drag: none;
-  user-drag: none;
-}
-
-nav a:focus,
-nav a:hover,
-nav a[selected] {
-  opacity: 1;
-}
-
-nav a:after {
-  content: '';
-  position: absolute;
-  background-color: transparent;
-  left: 50%;
-  bottom: 3px;
-  width: 0;
-  height: 3px;
-  transition: left 0.25s ease, width 0.25s ease, background-color 0.25s ease;
-}
-
-nav a[selected]:after {
-  background-color: #2196f3;
-  left: 0;
-  width: 100%;
-}
-
-section {
-  overflow: hidden;
-  padding: 16px;
-  height: calc(100% - 93px);
-}
-
-center {
-  display: table;
-  width: 100%;
-  height:100%;
-}
-
-center[hidden] {
-  display: none;
-}
-
-center div {
-  display: table-cell;
-  vertical-align: middle;
-  text-align: center;
-}
+/* Animation */
 
 [ripple] {
   background-image: radial-gradient(circle, transparent 1%, #2196f310 1%);
@@ -430,24 +434,4 @@ center div {
   background-color: #2196f310;
   background-size: 50%;
   transition: opacity 0.2s ease, background-color 0.15s ease, background-size 0.15s ease;
-}
-
-/* Anti-selection */
-
-mark,
-table th,
-ol,
-button,
-nav {
-  user-select: none;
-}
-
-/* Anti-scrollbar */
-
-::-webkit-scrollbar {
-  display: none;
-}
-
-* {
-  scrollbar-width: none;
 }

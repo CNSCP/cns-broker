@@ -22,8 +22,6 @@ var config;
 var app;
 var server;
 
-var nodes;
-
 var started = date.now();
 var used = date.now();
 
@@ -61,11 +59,7 @@ function init(service, section) {
       app.use(compression());
 
     // Status request
-    const root = master.config.messages.root || 'nodes';
-
     app.get('/', (req, res) => status(res));
-    app.get('/nodes', (req, res) => getNodes(req, res));
-    app.get('/' + root + '/:ident', (req, res) => getNode(req, res));
 
     // Serve public
     const pub = config.public;
@@ -86,7 +80,6 @@ function start() {
   // I promise to
   return new Promise((resolve, reject) => {
     // Get services
-    nodes = master.find('nodes');
     resolve();
   });
 }
@@ -133,133 +126,9 @@ function exit() {
     app = undefined;
     server = undefined;
 
-    nodes = undefined;
-
     debug('-- server service');
     resolve();
   });
-}
-
-// Get nodes list
-function getNodes(req, res) {
-  // Create table
-  const idents = nodes.getIdents();
-  const root = master.config.messages.root || 'nodes';
-
-  var table = '';
-
-  for (const ident in idents) {
-    // Add profile to list
-    const location = '<a href="/' + root + '/' + ident + '">View</a>';
-
-    const node = idents[ident];
-    const count = Object.keys(node).length;
-
-    table +=
-      '<tr>' +
-        '<td>' + ident + '</td>' +
-        '<td>' + count + '</td>' +
-        '<td>' + location + '</td>' +
-      '</tr>';
-  }
-
-  // Send nodes list
-  page(res, 200, 'Nodes - CNS Broker',
-    '<nav>' +
-      '<h1>CNS Broker</h1>' +
-      '<a ripple href="/">Status</a>' +
-      '<a ripple selected>Nodes</a>' +
-    '</nav>' +
-    '<section>' +
-      ((table !== '')?
-      ('<table>' +
-        '<tr>' +
-          '<th>Identity</th>' +
-          '<th>Nodes</th>' +
-          '<th></th>' +
-        '</tr>' +
-        table +
-      '</table>'):
-      '<p>No Nodes</p>') +
-    '</section>');
-}
-
-// Get node list
-function getNode(req, res) {
-  // Get config
-  const ident = req.params.ident;
-
-  const messages = master.config.messages;
-  const profiles = master.config.profiles;
-
-  const host = req.hostname;
-  const port = messages.proxy || messages.port || '1881';
-
-  const user = messages.user || '';
-  const pass = messages.pass || '';
-  const root = messages.root || 'nodes';
-
-  const uri = 'https://' + profiles.host + (profiles.path || '');
-
-  const scripts =
-    '<script>' +
-      "const config = {" +
-        "version: '" + master.version() + "', " +
-        "environment: '" + master.environment() + "', " +
-        "protocol: 'ws', " +
-        "host: '" + host + "', " +
-        "port: '" + port + "', " +
-        "user: '" + user + "', " +
-        "pass: '" + pass + "', " +
-        "root: '" + root + "', " +
-        "ident: '" + ident + "', " +
-        "profiles: '" + uri + "'" +
-      "};" +
-    '</script>' +
-    '<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>' +
-    '<script src="/nodes.js"></script>';
-
-  // Construct page
-  page(res, 200, 'Node - CNS Broker',
-    '<nav>' +
-      '<h1>CNS Broker</h1>' +
-      '<a ripple href="/">Status</a>' +
-      '<a ripple href="/nodes">Nodes</a>' +
-    '</nav>' +
-    '<section name="nodes">' +
-      '<center id="offline"><div>' +
-        '<mark primary><span>Offline</span></mark>' +
-      '</div></center>' +
-      '<table hidden grid id="online">' +
-      '<tr>' +
-        '<th>Context</th>' +
-        '<th>Nodes</th>' +
-        '<th>Properties</th>' +
-        '<th>Profiles</th>' +
-        '<th id="heading1">Server</th>' +
-        '<th>Connections</th>' +
-        '<th id="heading2">Client</th>' +
-      '</tr>' +
-      '<tr>' +
-        '<td><ol id="contexts"></ol></td>' +
-        '<td><ol id="nodes"></ol></td>' +
-        '<td><ul id="properties0"></ul></td>' +
-        '<td><ol id="profiles"></ol></td>' +
-        '<td><ul id="properties1"></ul></td>' +
-        '<td><ol id="connections"></ol></td>' +
-        '<td><ul id="properties2"></ul></td>' +
-      '</tr>' +
-      '</table>' +
-    '</section>' +
-    '<section hidden name="problem">' +
-      '<p>Most likely causes:</p>' +
-      '<ul>' +
-        "<li>There might be a typing error in the page's URL</li>" +
-        '<li>The page may have been removed or had its URL changed</li>' +
-        '<li>The page may be temporarily offline</li>' +
-      '</ul>' +
-    '</section>',
-    scripts);
 }
 
 // Send status response
@@ -268,8 +137,6 @@ function status(res) {
   page(res, 200, 'Status - CNS Broker',
     '<nav>' +
       '<h1>CNS Broker</h1>' +
-      '<a ripple selected>Status</a>' +
-      '<a ripple href="/nodes">Nodes</a>' +
     '</nav>' +
     '<section>' +
       '<table>' +
