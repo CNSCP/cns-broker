@@ -92,13 +92,13 @@ function setNode(id, node) {
     delete nodes[name];
   else nodes[name] = node;
 
-  // Reconnect them all
-  reconnect(ident, nodes);
+  // Connect them all
+  connect(ident, nodes);
 }
 
-// Reconnect all nodes
-function reconnect(ident, nodes) {
-  // First instance?
+// Connect all nodes
+function connect(ident, nodes) {
+  // Reset cache if first
   if (caching++ === 0)
     profiles.cacheStart();
 
@@ -110,9 +110,9 @@ function reconnect(ident, nodes) {
   })
   // And finally
   .finally((result) => {
-    // Reconnect if last in queue
-    if (caching > 0) caching--;
-    if (caching === 0) connectNodes(ident, nodes);
+    // Connect nodes if last
+    if (--caching === 0)
+      connectProfiles(ident, nodes);
 
     return null;
   });
@@ -120,219 +120,291 @@ function reconnect(ident, nodes) {
 
 // Read profiles into cache
 function cacheProfiles(nodes) {
-  // Read relevant profiles
-  var promises = [];
+  // Scan nodes
+  const promises = [];
 
   for (const id in nodes) {
     // Scan node profiles
     const node = nodes[id];
-    const scan = node.profiles;
+    const scan = node.profiles || [];
 
-    if (scan !== undefined) {
-      // Scan each profile
-      for (const profile of scan) {
-        // Have or use profile?
-        if (profile.name !== undefined &&
-          (profile.server === id || profile.client === id)) {
-          // Fetch into cache
-          const promise = profiles.cacheProfile(profile.name);
-          if (promise !== null) promises.push(promise);
-        }
+    for (const profile of scan) {
+      // Valid profile?
+      if (profile.name !== undefined) {
+        // Profile definition?
+        if (profile.server === id || profile.client === id)
+          promises.push(profiles.cacheProfile(profile.name));
       }
     }
   }
   return Promise.all(promises);
 }
 
+// Connect all profiles
+function connectProfiles(ident, nodes) {
+  // Keep changes
+  const changes = [];
+
+  // Connect and disconect nodes
+  connectNodes(nodes, changes);
+  disconnectNodes(nodes, changes);
+
+  // Re-publish changes
+  for (const name of changes) {
+    // Publish each change
+    messages.publish({
+      ident: ident,
+      name: name
+    }, nodes[name]);
+  }
+}
+
 // Connect all nodes
-function connectNodes(ident, nodes) {
-  // Mark changes
-  var changes = [];
-
+function connectNodes(nodes, changes) {
+  // Scan nodes
   for (const id in nodes) {
-    // Node has profiles?
+    // Scan node profiles
     const node = nodes[id];
-    const scan = node.profiles;
+    const scan = node.profiles || [];
 
-    if (scan !== undefined) {
-      // Scan profiles
-      for (const profile of scan) {
-        // Have or use profile?
-        if (profile.name !== undefined &&
-          (profile.server === id || profile.client === id))
-          connect(id, node, nodes, profile, changes);
+    for (const profile of scan) {
+      // Valid profile?
+      if (profile.name !== undefined) {
+        // Profile definition?
+        if (profile.server === id || profile.client === id)
+          connectNode(nodes, id, node, profile, changes);
       }
     }
   }
+}
 
-  // Re-publish any changes
-  for (const name of changes) {
-    const id = {ident: ident, name: name};
-    messages.publish(id, nodes[name]);
+// Disconnect relevant nodes
+function disconnectNodes(nodes, changes) {
+  // Scan nodes
+  for (const id in nodes) {
+    // Scan node profiles
+    const node = nodes[id];
+    const scan = node.profiles || [];
+
+    const valid = [];
+    const invalid = [];
+
+    for (const profile of scan) {
+      // Valid profile?
+      const name = profile.name;
+      const version = profile.version;
+
+      if (name !== undefined) {
+        // Profile definition?
+        if (profile.server === id || profile.client === id) {
+          // Mark as valid
+          valid.push(profile);
+          continue;
+        }
+
+        // Profile connection
+        const role = (profile.server !== undefined)?'server':'client';
+        const opposite = (role === 'server')?'client':'server';
+
+        // Has definition?
+        if (profileLocate(node, name, version, opposite, id)) {
+          // Has opposite definition?
+          const connId = profile[role];
+          const conn = nodes[connId];
+
+          if (conn !== undefined &&
+            profileLocate(conn, name, version, role, connId)) {
+            // Mark as valid
+            valid.push(profile);
+            continue;
+          }
+        }
+      }
+
+      // Mark as invalid
+      debug('nodes disconnect ' + name + ' from ' + id);
+      invalid.push(profile);
+    }
+
+    // Any invalid?
+    if (invalid.length > 0) {
+      // Only keep valid profiles
+      node.profiles = valid;
+      republish(id, changes);
+    }
   }
 }
 
 // Connect node
-function connect(id, node, nodes, profile, changes) {
+function connectNode(nodes, id, node, profile, changes) {
+  // Get profile properties
+  const properties = propertiesGet(profile);
+  if (properties === null) return;
+
+  // Add profile properties
+  var change = propertiesAdd(profile, properties);
+
+  // Connect server to clients?
+  if (profile.server === id &&
+    connectClients(nodes, id, node, profile, properties, changes))
+    change = true;
+
+  // Publish node?
+  if (change) republish(id, changes);
+}
+
+// Connect server to clients
+function connectClients(nodes, serverId, server, profile, properties, changes) {
+  // Scan nodes
+  var change = false;
+
+  for (const clientId in nodes) {
+    // Client in same context?
+    const client = nodes[clientId];
+
+    if (clientId !== serverId &&
+      client.context === server.context) {
+      // Scan client profiles
+      const scan = client.profiles || [];
+
+      for (const match of scan) {
+        // Connect client of same profile?
+        if (match.client === clientId && profileMatch(profile, match) &&
+          connectClient(serverId, server, profile, clientId, client, match, properties, changes))
+          change = true;
+      }
+    }
+  }
+  return change;
+}
+
+// Connect server to client
+function connectClient(serverId, server, profile, clientId, client, match, properties, changes) {
+  // Add profiles
+  const name = profile.name;
+  const version = profile.version;
+
+  const change = profileAdd(server, name, version, 'client', clientId, properties, match);
+  const publish = profileAdd(client, name, version, 'server', serverId, properties, profile);
+
+  // Re-publish client node?
+  if (publish) republish(clientId, changes);
+
+  return change;
+}
+
+// Add profile to node
+function profileAdd(node, name, version, role, id, properties, copy) {
+  // Profile exists?
+  var change = false;
+  var profile = profileLocate(node, name, version, role, id);
+
+  if (profile === null) {
+    // No, add new profile
+    profile = {
+      name: name
+    };
+
+    if (version !== undefined)
+      profile.version = version | 0;
+
+    profile[role] = id;
+
+    node.profiles.push(profile);
+    change = true;
+
+    debug('nodes connect ' + name + ' to ' + id);
+  }
+
+  // Add properties to profile
+  if (propertiesAdd(profile, properties, copy))
+    change = true;
+
+  return change;
+}
+
+// Match profiles
+function profileMatch(profile, match) {
+  return (profile.name === match.name &&
+    profile.version === match.version);
+}
+
+// Locate profile in node
+function profileLocate(node, name, version, role, id) {
+  // Scan profiles
+  const scan = node.profiles || [];
+
+  for (const profile of scan) {
+    // Found profile?
+    if (profile.name === name && profile.version === version &&
+      profile[role] === id)
+      return profile;
+  }
+  return null;
+}
+
+// Get profile definition properties
+function propertiesGet(profile) {
   // Get profile definition
   const name = profile.name;
   const definition = profiles.getProfile(name);
 
   if (definition === null) {
     error('connect error: profile ' + name + ' not found');
-    return;
+    return null;
   }
 
-  // Get version
-  const index = profile.version || definition.versions.length;
-  const version = definition.versions[index - 1];
+  // Get profile version
+  const versions = definition.versions || [];
+  const version = profile.version || versions.length;
 
-  if (version === undefined) {
-    error('connect error: profile ' + name + ' version ' + index + ' not found');
-    return;
+  const data = versions[version - 1];
+
+  if (data === undefined) {
+    error('connect error: profile ' + name + ' version ' + version + ' not found');
+    return null;
   }
 
   // Get version properties
-  const properties = version.properties;
-
-  // Connect server to clients
-  if (profile.server === id)
-    connectServer(id, node, nodes, profile, name, properties, changes);
+  return data.properties || [];
 }
 
-// Connect server to clients
-function connectServer(serverId, server, nodes, profile, name, properties, changes) {
-  // Add server properties
-  var spub = addProperties(profile, properties);
+// Add properties to profile
+function propertiesAdd(profile, properties, copy) {
+  // What profile type?
+  const need = (profile.server !== undefined)?null:undefined;
+  const from = (copy === undefined)?null:(copy.properties || {});
 
-  // Look for clients
-  for (const clientId in nodes) {
-    // Ignore this node
-    if (clientId !== serverId) {
-      // Right context?
-      const client = nodes[clientId];
+  // Scan properties
+  var change = false;
 
-      if (client.context === server.context) {
-        // Client has profiles?
-        const scan = client.profiles;
+  for (const property of properties) {
+    // Valid property type?
+    if (property.server === need) {
+      // Get profile properties
+      const container = profile.properties || {};
 
-        if (scan !== undefined) {
-          // Scan client node profiles
-          for (const p of scan) {
-            // Client profile?
-            if (p.name === name && p.client === clientId) {
-              // Add client properties
-              var cpub = addProperties(p, properties, profile);
+      // Get current value
+      const name = property.name;
+      const current = container[name];
 
-              // Client connected?
-              var pro = locate(server, name, 'client', clientId);
+      // Get new value
+      var value;
 
-              if (pro === null) {
-                // No, add client connection
-                pro = {
-                  name: name,
-                  client: clientId
-                };
+      if (from !== null) value = from[name] || '';
+      else if (current === undefined) value = '';
 
-                server.profiles.push(pro);
-                spub = true;
-              }
+      // Property has changed?
+      if (value !== undefined && value !== current) {
+        // Set new value
+        container[name] = value;
+        profile.properties = container;
 
-              // Add server properties to client
-              if (addProperties(pro, properties, p))
-                spub = true;
-
-              // Server connected?
-              var prr = locate(client, name, 'server', serverId);
-
-              if (prr === null) {
-                // No, add server connection
-                prr = {
-                  name: name,
-                  server: serverId
-                };
-
-                client.profiles.push(prr);
-                cpub = true;
-              }
-
-              // Add client properties to server
-              if (addProperties(prr, properties, profile))
-                cpub = true;
-
-              // Republish client node?
-              if (cpub) republish(clientId, changes);
-            }
-          }
-        }
+        change = true;
       }
     }
   }
-
-  // Republish server node?
-  if (spub) republish(serverId, changes);
-}
-
-// Locate profile in node
-function locate(node, name, type, id) {
-  // Node has profiles?
-  const scan = node.profiles;
-
-  if (profiles !== undefined) {
-    // Scan profiles
-    for (const profile of scan) {
-      // Found profile?
-      if (profile.name === name &&
-        profile[type] === id) {
-        return profile;
-      }
-    }
-  }
-  return null;
-}
-
-// Add definition properties to profile
-function addProperties(profile, properties, defaults) {
-  // Mark if profile changed
-  var changed = false;
-
-  // Add property container?
-  if (profile.properties === undefined) {
-    profile.properties = {};
-//    changed = true;
-  }
-
-  // Definition has properties?
-  if (properties !== undefined) {
-    // What profile type?
-    const need = (profile.server !== undefined)?null:undefined;
-    const values = (defaults === undefined)?{}:(defaults.properties || {});
-
-    // Add properties
-    for (const property of properties) {
-      // Valid for server or client?
-      if (property.server === need) {
-        // Get property value
-        const name = property.name;
-
-        const value = values[name];
-        const current = profile.properties[name];
-
-        // Property is required?
-        if (current === undefined && property.required === null) {
-          profile.properties[name] = '';
-          changed = true;
-        }
-
-        // Property has changed?
-        if (defaults && value !== current) {
-          profile.properties[name] = value;
-          changed = true;
-        }
-      }
-    }
-  }
-  return changed;
+  return change;
 }
 
 // Mark for re-publishing

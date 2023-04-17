@@ -39,7 +39,7 @@ npm run start
 
 To shut down the application, hit `ctrl-c`.
 
-The status page of the broker is [localhost:8080](http://localhost:8080) by default. MQTT communication happens over port `1881` by default. You can change this and other settings from inside of [config.json](./config.json).
+MQTT communication happens over port `1881` by default. You can change this and other settings from inside [config.json](./config.json).
 
 ## Maintainers
 
@@ -64,6 +64,8 @@ npm run deploy
 ```
 
 The version minor number in `package.json` will automatically be incremented and the patch number reset.
+
+### Digital Ocean
 
 ## License
 

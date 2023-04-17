@@ -6,14 +6,19 @@
     "staging"
   ],
   "services": [
-    "messages",
     "profiles",
     "nodes",
+    "messages",
     "server"
   ],
+  "profiles": {
+    "host": "cp.padi.io",
+    "path": "/profiles",
+    "cache": true
+  },
   "messages": {
-    "module": "aedes",
-    "protocol": "mqtt",
+    "module": "mqtt",
+    "protocol": "ws",
     "host": "localhost",
     "port": "1881",
     "user": "guest",
@@ -26,11 +31,6 @@
     "publish": {
       "retain": true
     }
-  },
-  "profiles": {
-    "host": "cp.padi.io",
-    "path": "/profiles",
-    "cache": true
   },
   "server": {
     "host": "localhost",
