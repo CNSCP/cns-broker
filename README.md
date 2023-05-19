@@ -39,8 +39,6 @@ npm run start
 
 To shut down the application, hit `ctrl-c`.
 
-MQTT communication happens over port `1881` by default. You can change this and other settings from inside [config.json](./config.json).
-
 ## Maintainers
 
 This project contains two environments, one for Staging (development) and one for Production. It is recommended to push changes to Staging, test those changes, then deploy them to Production.

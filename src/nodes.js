@@ -11,7 +11,7 @@ var config;
 var messages;
 var profiles;
 
-var idents;
+var nodes;
 var caching;
 
 // Local functions
@@ -24,7 +24,7 @@ function init(service, section) {
     master = service;
     config = section;
 
-    idents = {};
+    nodes = {};
     caching = 0;
 
     debug('++ nodes service');
@@ -57,53 +57,35 @@ function exit() {
   });
 }
 
-// Get node identities
-function getIdents() {
-  return idents;
+// Get all nodes
+function getNodes() {
+  return nodes;
 }
 
 // Get specific node
 function getNode(id) {
-  const ident = id.ident;
-  const name = id.name;
-
-  const nodes = idents[ident];
-
-  if (nodes !== undefined)
-    return nodes[name] || null;
-
-  return null;
+  return nodes[id] || null;
 }
 
 // Set node
 function setNode(id, node) {
-  const ident = id.ident;
-  const name = id.name;
-
-  var nodes = idents[ident];
-
-  if (nodes === undefined) {
-    nodes = {};
-    idents[ident] = nodes;
-  }
-
-  // Removing node?
+  // Set or remove?
   if (node === undefined)
-    delete nodes[name];
-  else nodes[name] = node;
+    delete nodes[id];
+  else nodes[id] = node;
 
   // Connect them all
-  connect(ident, nodes);
+  connect();
 }
 
 // Connect all nodes
-function connect(ident, nodes) {
+function connect() {
   // Reset cache if first
   if (caching++ === 0)
     profiles.cacheStart();
 
   // Resolve profiles
-  cacheProfiles(nodes)
+  cacheProfiles()
   // Failure
   .catch((e) => {
     error('caching error: ' + e.message);
@@ -112,14 +94,14 @@ function connect(ident, nodes) {
   .finally((result) => {
     // Connect nodes if last
     if (--caching === 0)
-      connectProfiles(ident, nodes);
+      connectProfiles();
 
     return null;
   });
 }
 
 // Read profiles into cache
-function cacheProfiles(nodes) {
+function cacheProfiles() {
   // Scan nodes
   const promises = [];
 
@@ -141,26 +123,21 @@ function cacheProfiles(nodes) {
 }
 
 // Connect all profiles
-function connectProfiles(ident, nodes) {
+function connectProfiles() {
   // Keep changes
   const changes = [];
 
   // Connect and disconect nodes
-  connectNodes(nodes, changes);
-  disconnectNodes(nodes, changes);
+  connectNodes(changes);
+  disconnectNodes(changes);
 
-  // Re-publish changes
-  for (const name of changes) {
-    // Publish each change
-    messages.publish({
-      ident: ident,
-      name: name
-    }, nodes[name]);
-  }
+  // Publish each change
+  for (const id of changes)
+    messages.publish(id, nodes[id]);
 }
 
 // Connect all nodes
-function connectNodes(nodes, changes) {
+function connectNodes(changes) {
   // Scan nodes
   for (const id in nodes) {
     // Scan node profiles
@@ -172,14 +149,14 @@ function connectNodes(nodes, changes) {
       if (profile.name !== undefined) {
         // Profile definition?
         if (profile.server === id || profile.client === id)
-          connectNode(nodes, id, node, profile, changes);
+          connectNode(id, node, profile, changes);
       }
     }
   }
 }
 
 // Disconnect relevant nodes
-function disconnectNodes(nodes, changes) {
+function disconnectNodes(changes) {
   // Scan nodes
   for (const id in nodes) {
     // Scan node profiles
@@ -236,7 +213,7 @@ function disconnectNodes(nodes, changes) {
 }
 
 // Connect node
-function connectNode(nodes, id, node, profile, changes) {
+function connectNode(id, node, profile, changes) {
   // Get profile properties
   const properties = propertiesGet(profile);
   if (properties === null) return;
@@ -246,7 +223,7 @@ function connectNode(nodes, id, node, profile, changes) {
 
   // Connect server to clients?
   if (profile.server === id &&
-    connectClients(nodes, id, node, profile, properties, changes))
+    connectClients(id, node, profile, properties, changes))
     change = true;
 
   // Publish node?
@@ -254,7 +231,7 @@ function connectNode(nodes, id, node, profile, changes) {
 }
 
 // Connect server to clients
-function connectClients(nodes, serverId, server, profile, properties, changes) {
+function connectClients(serverId, server, profile, properties, changes) {
   // Scan nodes
   var change = false;
 
@@ -435,7 +412,7 @@ exports.init = init;
 exports.start = start;
 exports.exit = exit;
 
-exports.getIdents = getIdents;
+exports.getNodes = getNodes;
 
 exports.getNode = getNode;
 exports.setNode = setNode;

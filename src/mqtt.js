@@ -39,27 +39,28 @@ function init(service, section) {
       // Ignore server publish
       if (client === null) return;
 
-      // Node id is topic
+      // Is valid topic?
       const topic = packet.topic;
       const payload = packet.payload;
 
       const id = getId(topic);
+      if (id === null) return;
 
       // Ignore internal publish
       if (packet.internal) {
-        debug('<< messages pub ' + id.name);
+        debug('<< messages pub ' + topic);
         return;
       }
 
       // Removing topic?
       if (payload.length === 0) {
-        debug('>> messages remove ' + id.name);
+        debug('>> messages remove ' + topic);
         nodes.setNode(id);
         return;
       }
 
       // Client publish
-      debug('>> messages pub ' + id.name);
+      debug('>> messages pub ' + topic);
 
       // Failed to parse?
       const node = parse(payload);
@@ -70,17 +71,13 @@ function init(service, section) {
     })
     // Client subscribe
     .on('subscribe', (subs, client) => {
-      for (const packet of subs) {
-        const id = getId(packet.topic);
-        debug('>> messages sub ' + id.name);
-      }
+      for (const packet of subs)
+        debug('>> messages sub ' + packet.topic);
     })
     // Client unsibscribe
     .on('unsubscribe', (unsubs, client) => {
-      for (const topic of unsubs) {
-        const id = getId(topic);
-        debug('>> messages unsub ' + id.name);
-      }
+      for (const topic of unsubs)
+        debug('>> messages unsub ' + topic);
     })
     // Client disconnect
     .on('clientDisconnect', (client) => {
@@ -199,11 +196,9 @@ function getTopic(id) {
   const path = [];
 
   const root = config.root || '';
-  const ident = (id === undefined)?'':(id.ident || '');
-  const name = (id === undefined)?'':(id.name || '');
+  const name = id || '';
 
   if (root !== '') path.push(root);
-  if (ident !== '') path.push(ident);
   if (name !== '') path.push(name);
 
   return path.join('/');
@@ -212,17 +207,14 @@ function getTopic(id) {
 // Get id from topic
 function getId(topic) {
   const path = topic.split('/');
-
   const root = config.root || '';
-  if (root !== '') path.shift();
 
-  const ident = path.shift();
-  const name = path.join('/');
+  // Must be root/context/node
+  if ((root !== '' && root !== path.shift()) ||
+    path.length !== 2)
+    return null;
 
-  return {
-    ident: ident,
-    name: name
-  };
+  return path.join('/');
 }
 
 // Parse json packet

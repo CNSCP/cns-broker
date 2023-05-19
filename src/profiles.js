@@ -62,12 +62,14 @@ function cacheProfile(name) {
   // I promise to
   return new Promise((resolve, reject) => {
     // Send request
-    const host = config.host;
-    const path = config.path || '';
+    const prot = config.protocol || 'https';
+    const host = config.host || 'cp.padi.io';
+    const port = config.port?(':' + config.port):'';
+    const path = config.path || '/profiles';
 
-    const uri = 'https://' + host + path + '/' + name;
+    const uri = prot + '://' + host + port + path + '/' + name;
 
-    debug('<< profiles GET ' + name);
+    debug('<< profiles get ' + name);
 
     const req = https.get(uri, (res) => {
       // Get status
