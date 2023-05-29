@@ -19,7 +19,7 @@
   "messages": {
     "module": "mqtt",
     "protocol": "ws",
-    "host": "localhost",
+    "host": "0.0.0.0",
     "port": "1881",
     "user": "guest",
     "pass": "cnscp",
