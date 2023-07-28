@@ -9,6 +9,7 @@ var master;
 var config;
 
 var messages;
+var proxy;
 var profiles;
 
 var nodes;
@@ -38,6 +39,7 @@ function start() {
   return new Promise((resolve, reject) => {
     // Get services
     messages = master.find('messages');
+    proxy = master.find('proxy');
     profiles = master.find('profiles');
 
     resolve();
@@ -50,6 +52,7 @@ function exit() {
   return new Promise((resolve, reject) => {
     // Destroy objects
     messages = undefined;
+    proxy = undefined;
     profiles = undefined;
 
     debug('-- nodes service');
@@ -69,34 +72,50 @@ function getNode(id) {
 
 // Set node
 function setNode(id, node) {
+  // Proxy handler
+  proxy.update(id, node);
+
   // Set or remove?
   if (node === undefined)
     delete nodes[id];
   else nodes[id] = node;
 
   // Connect them all
-  connect();
+  return connect()
+  // Success
+  .then((result) => {
+    // Proxy handler
+    proxy.connect(id, node);
+  })
+  // Failure
+  .catch((e) => {
+    error('node error: ' + e.message);
+  })
 }
 
 // Connect all nodes
 function connect() {
-  // Reset cache if first
-  if (caching++ === 0)
-    profiles.cacheStart();
+  // I promise to
+  return new Promise((resolve, reject) => {
+    // Reset cache if first
+    if (caching++ === 0)
+      profiles.cacheStart();
 
-  // Resolve profiles
-  cacheProfiles()
-  // Failure
-  .catch((e) => {
-    error('caching error: ' + e.message);
-  })
-  // And finally
-  .finally((result) => {
-    // Connect nodes if last
-    if (--caching === 0)
-      connectProfiles();
-
-    return null;
+    // Resolve profiles
+    cacheProfiles()
+    // Failure
+    .catch((e) => {
+      error('caching error: ' + e.message);
+      resolve(null);
+    })
+    // And finally
+    .finally((result) => {
+      // Connect nodes if last
+      if (--caching === 0)
+        connectProfiles();
+      resolve(null);
+      return null;
+    });
   });
 }
 
@@ -167,6 +186,13 @@ function disconnectNodes(changes) {
     const invalid = [];
 
     for (const profile of scan) {
+      // Profile proxy connection?
+      if (profile.ignore) {
+        // Mark as valid
+        valid.push(profile);
+        continue;
+      }
+
       // Valid profile?
       const name = profile.name;
       const version = profile.version;
@@ -257,6 +283,12 @@ function connectClients(serverId, server, profile, properties, changes) {
 
 // Connect server to client
 function connectClient(serverId, server, profile, clientId, client, match, properties, changes) {
+
+
+if (profile.proxy !== undefined && match.proxy !== undefined && profile.proxy === match.proxy)
+  return false;
+
+
   // Add profiles
   const name = profile.name;
   const version = profile.version;
@@ -416,3 +448,5 @@ exports.getNodes = getNodes;
 
 exports.getNode = getNode;
 exports.setNode = setNode;
+
+exports.connect = connect;

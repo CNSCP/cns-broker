@@ -9,6 +9,7 @@
     "profiles",
     "nodes",
     "messages",
+    "proxy",
     "server"
   ],
   "profiles": {
@@ -31,6 +32,8 @@
     "publish": {
       "retain": true
     }
+  },
+  "proxy": {
   },
   "server": {
     "host": "localhost",

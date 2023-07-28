@@ -1,6 +1,6 @@
 {
   "name": "cns-broker",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "CNS Broker",
   "author": "Padi, Inc",
   "license": "ISC",
@@ -15,8 +15,9 @@
   "dependencies": {
     "aedes": "^0.46.0",
     "aedes-server-factory": "^0.2.1",
+    "colors": "^1.4.0",
     "compression": "^1.7.4",
     "express": "^4.17.1",
-    "colors": "^1.4.0"
+    "mqtt": "^4.3.7"
   }
 }
