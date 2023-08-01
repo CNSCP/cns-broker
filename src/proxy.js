@@ -1,8 +1,6 @@
 // proxy.js - Proxy service
 // Copyright 2023 Padi, Inc. All Rights Reserved.
 
-// wss://eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJwYWRpLWFwcCIsImlzcyI6ImVRRXVUZWwxeXBkSTkwSkhZUHJmIiwic3ViIjoiSXJYbnBGU1B3ZGVvMHJBOUhqS3AiLCJpYXQiOjE2OTA0NjUzNTh9.uZFjeP7qBSRaKGw79hX9_NDWekmnE14UHKFnhXmEYEQ@cns.padi.io:1881#thing/IrXnpFSPwdeo0rA9HjKp
-
 'use strict';
 
 // Imports
@@ -91,55 +89,60 @@ function exit() {
   });
 }
 
-// Connect node to proxy
-function connect(id, node) {
-  // Scan nodes
-  const scan = nodes.getNodes();
-
-  const valid = [];
-  const invalid = [];
-
-  for (const id in scan) {
-    // Scan node properties
-    const node = scan[id];
-    const proxy = node.proxy;
-
-    if (proxy !== undefined && proxy !== '') {
-      try {
-        // Open proxy connection
-        const url = new URL(proxy);
-
-        const subscribe = url.hash.substr(1);
-        const payload = url.hostname.endsWith('.padi.io')?PADI_PAYLOAD:CNS_PAYLOAD;
-
-        if (subscribe.includes('#') || subscribe.includes('+') ||
-          (payload === PADI_PAYLOAD && !subscribe.startsWith('thing/')))
-          throw new Error('illegal ' + payload + ' topic ' + subscribe);
-
-        open(id, url.origin, url.username, url.password, subscribe, payload);
-        valid.push(id);
-      } catch(e) {
-        error('proxy error: ' + e.message);
-      }
-    }
-  }
-
-  // Check existing are valid
-  for (const id in clients)
-    if (!valid.includes(id)) invalid.push(id);
-
-  // Close invalid
-  for (const id of invalid)
-    close(id);
-}
-
-// Update node for proxy
-function update(id, node) {
-  // Proxy changed?
+// Manage node proxy
+function manage(id, node) {
+  // Get node details
   const prev = nodes.getNode(id);
 
-  if (prev === null || node === undefined ||
-    prev.proxy === node.proxy) return;
+  // Disconnect?
+  if (node === undefined ||
+    (prev !== null && node.proxy !== prev.proxy))
+    disconnect(id, node);
+
+  // Connect?
+  if (node !== undefined &&
+    node.proxy !== undefined && node.proxy !== '')
+    connect(id, node);
+
+  // Update profile changes
+  if (node !== undefined && prev !== null)
+    update(id, node, prev);
+}
+
+// Connect proxy node
+function connect(id, node) {
+  const proxy = node.proxy;
+
+  try {
+    // Open proxy connection
+    const url = new URL(proxy);
+
+    const payload = url.hostname.endsWith('.padi.io')?PADI_PAYLOAD:CNS_PAYLOAD;
+    var topic = url.hash.substr(1);
+
+    // Valid topic?
+    if (topic.includes('#') || topic.includes('+') ||
+      (payload === PADI_PAYLOAD && !topic.startsWith('thing/')))
+      throw new Error('illegal ' + payload + ' topic ' + topic);
+
+    open(id,
+      url.origin,
+      url.username,
+      url.password,
+      topic,
+      payload);
+  } catch (e) {
+    error('proxy error: ' + e.message);
+  }
+}
+
+// Disconnect proxy node
+function disconnect(id, node) {
+  // Close proxy connection
+  close(id);
+
+  // Node deleted?
+  if (node === undefined) return;
 
   var changed = false;
 
@@ -152,7 +155,7 @@ function update(id, node) {
     for (const profile of profiles) {
       if (profile.proxy === undefined)
         keep.push(profile);
-      else changed |= true;
+      else changed = true;
     }
 
     if (changed) {
@@ -162,13 +165,82 @@ function update(id, node) {
     }
   }
 
-  if (!changed) return;
+  // Publish changes
+  if (changed) messages.publish(id, node);
+}
 
-  messages.publish(id, node);
+// Update proxy node
+function update(id, node, prev) {
+  // Client is connected?
+  const client = clients[id];
+
+  if (client !== undefined && client !== null) {
+    // Look for differences
+    const profiles1 = node.profiles;
+    const profiles2 = prev.profiles;
+
+    // No profiles?
+    if (!Array.isArray(profiles1) ||
+      !Array.isArray(profiles2))
+      return false;
+
+    // Scan profiles
+    for (const profile1 of profiles1) {
+      // Not proxy profile?
+      if (typeof profile1.proxy !== 'object') continue;
+
+      // Has profile properties?
+      const properties1 = profile1.properties;
+      if (properties1 === undefined) continue;
+
+      // Look for previous
+      var properties2;
+
+      for (const profile2 of profiles2) {
+        // Profiles match?
+        if (typeof profile2.proxy === 'object' &&
+          profile2.name === profile1.name && profile2.version === profile1.version &&
+          profile2.client === profile1.client && profile2.server === profile2.server) {
+          // Found it
+          properties2 = profile2.properties;
+          break;
+        }
+      }
+
+      // Found previous?
+      if (properties2 === undefined) continue;
+
+      // Properties changed?
+      var changed = false;
+
+      if (Object.keys(properties1).length === Object.keys(properties2).length) {
+        // Values changed?
+        for (const property in properties1) {
+          if (properties1[property] !== properties2[property]) {
+            changed = true;
+            break;
+          }
+        }
+      } else changed = true;
+
+      if (changed) {
+        // What type?
+        switch (client.cnsPayload) {
+          case PADI_PAYLOAD:
+            padiPublish(id, client, profile1);
+            break;
+          case CNS_PAYLOAD:
+            cnsPublish(id, client, profile1);
+            break;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 // Open connection
-function open(id, uri, username, password, subscribe, payload) {
+function open(id, uri, username, password, topic, payload) {
   // Client already exists?
   var client = clients[id];
 
@@ -177,7 +249,7 @@ function open(id, uri, username, password, subscribe, payload) {
       var first = true;
 
       // Connect client
-      debug('<< proxy connecting ' + uri);
+      debug('<< proxy connecting ' + id);
 
       client = mqtt.connect(uri, {
         username: username,
@@ -185,31 +257,35 @@ function open(id, uri, username, password, subscribe, payload) {
       })
       // Connected
       .on('connect', () => {
-        debug('<> proxy connected ' + uri);
+        debug('<> proxy connected ' + id);
 
         if (first) {
           // Subscribe to topic
-          debug('<< proxy subscribing ' + subscribe);
-          client.subscribe(subscribe);
+          debug('<< proxy sub ' + topic);
 
+          client.subscribe(topic);
           first = false;
         }
       })
       // Message received
       .on('message', (topic, message) => {
-        debug('>> proxy message ' + uri);
+        debug('>> proxy message ' + topic);
 
         try {
+          // Check topic as requested?
+          if (topic !== client.cnsTopic)
+            throw new Error('received wrong topic ' + topic);
+
           // What type?
-          switch (payload) {
+          switch (client.cnsPayload) {
             case PADI_PAYLOAD:
-              padiPayload(id, subscribe, topic, message);
+              padiMessage(id, topic, message);
               break;
             case CNS_PAYLOAD:
-              cnsPayload(id, subscribe, topic, message);
+              cnsMessage(id, topic, message);
               break;
           }
-        } catch(e) {
+        } catch (e) {
           abort(id, client, e);
         }
       })
@@ -219,8 +295,11 @@ function open(id, uri, username, password, subscribe, payload) {
       });
 
       // Keep client
+      client.cnsTopic = topic;
+      client.cnsPayload = payload;
+
       clients[id] = client;
-    } catch(e) {
+    } catch (e) {
       abort(id, client, e);
     }
   }
@@ -242,49 +321,35 @@ function abort(id, client, e) {
 function close(id) {
   const client = clients[id];
 
-  if (client !== undefined && client !== null) {
+  if (client !== undefined) {
     debug('>< proxy disconnecting ' + id);
-    client.end();
+
+    if (client !== null) client.end();
+    delete clients[id];
   }
-  delete clients[id];
 }
 
-// Handle padi payload
-function padiPayload(id, subscribe, topic, message) {
-  // Check topic as requested?
-  if (topic !== subscribe)
-    throw new Error('received wrong topic ' + topic);
-
-  // Decode payload
-  const payload = JSON.parse(message);
-
-  // Has things in payload?
-  const things = payload.padiThings;
-
-  if (things === undefined || typeof things !== 'object')
-    throw new Error('malformed payload ' + topic);
-
+// Handle padi message
+function padiMessage(id, topic, message) {
   // Get thing id from topic
   const parts = topic.split('/');
   const thingId = parts[1];
 
-  // Has thing in payload?
-  const thing = payload.padiThings[thingId];
+  // Decode payload
+  const payload = JSON.parse(message);
 
-  if (thing === undefined || typeof thing !== 'object')
-    throw new Error('malformed payload data ' + thingId);
+  // Get connections?
+  const conns = (parts[2] === 'connections')?
+    payload:payload.padiConnections;
 
-  // Has connections?
-  const conns = payload.padiConnections;
-
-  if (conns !== undefined && typeof conns !== 'object')
-    throw new Error('malformed payload connections ' + thingId);
+  if (typeof conns !== 'object')
+    throw new Error('malformed payload ' + topic);
 
   // Get node?
   const node = nodes.getNode(id);
 
   if (node === null)
-    throw new Error('node has gone ' + id);
+    throw new Error('proxy node not found ' + id);
 
   // Update changes
   var changed = false;
@@ -301,19 +366,23 @@ function padiPayload(id, subscribe, topic, message) {
     }
   }
 
-  // Has connections?
-  if (conns !== undefined) {
-    // Copy connection profiles
-    for (const connId in conns) {
-      promises.push(padiConnection(id, thingId, connId, conns[connId], profiles));
-      changed = true;
-    }
+  // Process connections
+  for (const connId in conns) {
+    // Add connection to profiles
+    promises.push(padiConnection(
+      id,
+      thingId,
+      connId,
+      conns[connId],
+      profiles));
+
+    changed = true;
   }
 
   // Node changed?
   if (!changed) return;
 
-  //
+  // Promise connections
   Promise.all(promises)
   // Success
   .then((result) => {
@@ -378,58 +447,73 @@ function padiConnection(id, thingId, connId, conn, results) {
       else properties2[name] = value;
     }
 
-    // Create this side
-    const profile1 = {
-      proxy: connId,
-      name: name
-    };
+    // Find existing profile?
+    var profile;
 
-    if (version !== undefined && version !== '')
-      profile1.version = version;
+    for (const scan of results) {
+      if (scan.name === name && (!version || scan.version === version) &&
+        scan[role] !== undefined) {
+        // Found match
+        profile = scan;
+        break;
+      }
+    }
 
-    profile1[role] = id;
+    // None found?
+    if (profile === undefined) {
+      // Create new proxy profile
+      profile = {
+        name: name
+      };
 
-    if (Object.keys(properties1).length > 0)
-      profile1.properties = properties1;
+      if (version !== undefined && version !== '')
+        profile.version = version;
 
-    results.push(profile1);
+      profile[role] = id;
 
-    // Reverse role
-    role = (role === 'server')?'client':'server';
+      if (Object.keys(properties1).length > 0)
+        profile.properties = properties1;
 
-    // Create that side
-    const profile2 = {
-      proxy: connId,
-      ignore: true,
-      name: name
-    };
+      profile.proxy = {};
 
-    if (version !== undefined && version !== '')
-      profile2.version = version;
+      results.push(profile);
+    }
 
-    profile2[role] = connId;
-
-    if (Object.keys(properties2).length > 0)
-      profile2.properties = properties2;
-
-    results.push(profile2);
+    // Create new proxy
+    profile.proxy[connId] = properties2;
 
     return connId;
   });
 }
 
-// Handle cns payload
-function cnsPayload(id, subscribe, topic, message) {
-  // Check topic as requested?
-  if (topic !== subscribe)
-    throw new Error('received wrong topic ' + topic);
+// Handle padi publish
+function padiPublish(id, client, profile) {
+  // Publish to proxy
+  const name = profile.name;
+  const role = (profile.server !== undefined)?'server':'client';
 
-  // Decode payload
-  const payload = JSON.parse(message);
+  const parts = client.cnsTopic.split('/');
+  const topic = 'thing/' + parts[1] + '/' + role + '/' + name;
 
+  const payload = JSON.stringify(profile.properties);
 
+  debug('proxy pub ' + topic);
 
+  client.publish(topic, payload, {
+    retain: true
+  }, (e) => {
+    if (e) error('proxy publish error: ' + e.message);
+  });
+}
 
+// Handle cns message
+function cnsMessage(id, topic, message) {
+  // NYI
+}
+
+// Handle cns publish
+function cnsPublish(id, client, profile) {
+  // NYI
 }
 
 // Output a message
@@ -455,5 +539,4 @@ exports.run = run;
 exports.term = term;
 exports.exit = exit;
 
-exports.connect = connect;
-exports.update = update;
+exports.manage = manage;

@@ -73,7 +73,7 @@ function getNode(id) {
 // Set node
 function setNode(id, node) {
   // Proxy handler
-  proxy.update(id, node);
+  proxy.manage(id, node);
 
   // Set or remove?
   if (node === undefined)
@@ -82,11 +82,6 @@ function setNode(id, node) {
 
   // Connect them all
   return connect()
-  // Success
-  .then((result) => {
-    // Proxy handler
-    proxy.connect(id, node);
-  })
   // Failure
   .catch((e) => {
     error('node error: ' + e.message);
@@ -186,13 +181,6 @@ function disconnectNodes(changes) {
     const invalid = [];
 
     for (const profile of scan) {
-      // Profile proxy connection?
-      if (profile.ignore) {
-        // Mark as valid
-        valid.push(profile);
-        continue;
-      }
-
       // Valid profile?
       const name = profile.name;
       const version = profile.version;
@@ -283,11 +271,9 @@ function connectClients(serverId, server, profile, properties, changes) {
 
 // Connect server to client
 function connectClient(serverId, server, profile, clientId, client, match, properties, changes) {
-
-
-if (profile.proxy !== undefined && match.proxy !== undefined && profile.proxy === match.proxy)
-  return false;
-
+  // Cannot connect proxy to proxy
+  if (profile.proxy !== undefined && match.proxy !== undefined)
+    return false;
 
   // Add profiles
   const name = profile.name;
