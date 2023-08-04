@@ -9,8 +9,8 @@ const mqtt = require("mqtt");
 
 // Constants
 
-const PADI_PAYLOAD = 'padi';
-const CNS_PAYLOAD = 'cns';
+const CNS_HOST = 'cns';
+const PADI_HOST = 'padi';
 
 // Local data
 
@@ -111,26 +111,46 @@ function manage(id, node) {
 
 // Connect proxy node
 function connect(id, node) {
-  const proxy = node.proxy;
-
   try {
-    // Open proxy connection
-    const url = new URL(proxy);
+    // Parse property
+    const url = new URL(node.proxy);
 
-    const payload = url.hostname.endsWith('.padi.io')?PADI_PAYLOAD:CNS_PAYLOAD;
-    var topic = url.hash.substr(1);
+    const host = url.hostname.endsWith('.padi.io')?PADI_HOST:CNS_HOST;
+    const topic = url.hash.substr(1);
 
     // Valid topic?
-    if (topic.includes('#') || topic.includes('+') ||
-      (payload === PADI_PAYLOAD && !topic.startsWith('thing/')))
-      throw new Error('illegal ' + payload + ' topic ' + topic);
+    var valid = false;
 
-    open(id,
+    if (!topic.includes('#') && !topic.includes('+')) {
+      const parts = topic.split('/');
+
+      // What host?
+      switch (host) {
+        case CNS_HOST:
+          valid = (parts[0] === 'cns' && parts.length === 3);
+          break;
+        case PADI_HOST:
+          valid = (parts[0] === 'thing' &&
+            ((parts.length === 3 && parts[2] === 'connections') ||
+            parts.length === 2));
+          break;
+      }
+    }
+
+    if (!valid)
+      throw new Error('illegal ' + host + ' topic ' + topic);
+
+    // Valid topic?
+//    if (topic.includes('#') || topic.includes('+') ||
+//      (host === PADI_HOST && !topic.startsWith('thing/')))
+//      throw new Error('illegal ' + host + ' topic ' + topic);
+
+    // Open connection
+    open(id, host,
       url.origin,
       url.username,
       url.password,
-      topic,
-      payload);
+      topic);
   } catch (e) {
     error('proxy error: ' + e.message);
   }
@@ -224,13 +244,13 @@ function update(id, node, prev) {
       } else changed = true;
 
       if (changed) {
-        // What type?
-        switch (client.cnsPayload) {
-          case PADI_PAYLOAD:
-            padiPublish(id, client, profile1);
-            break;
-          case CNS_PAYLOAD:
+        // What host?
+        switch (client.cnsHost) {
+          case CNS_HOST:
             cnsPublish(id, client, profile1);
+            break;
+          case PADI_HOST:
+            padiPublish(id, client, profile1);
             break;
         }
       }
@@ -240,7 +260,7 @@ function update(id, node, prev) {
 }
 
 // Open connection
-function open(id, uri, username, password, topic, payload) {
+function open(id, host, uri, username, password, topic) {
   // Client already exists?
   var client = clients[id];
 
@@ -276,13 +296,16 @@ function open(id, uri, username, password, topic, payload) {
           if (topic !== client.cnsTopic)
             throw new Error('received wrong topic ' + topic);
 
-          // What type?
-          switch (client.cnsPayload) {
-            case PADI_PAYLOAD:
-              padiMessage(id, topic, message);
+          // Keep last message
+          client.cnsMessage = message;
+
+          // What host?
+          switch (client.cnsHost) {
+            case CNS_HOST:
+              cnsMessage(id, client, message);
               break;
-            case CNS_PAYLOAD:
-              cnsMessage(id, topic, message);
+            case PADI_HOST:
+              padiMessage(id, client, message);
               break;
           }
         } catch (e) {
@@ -295,8 +318,8 @@ function open(id, uri, username, password, topic, payload) {
       });
 
       // Keep client
+      client.cnsHost = host;
       client.cnsTopic = topic;
-      client.cnsPayload = payload;
 
       clients[id] = client;
     } catch (e) {
@@ -329,9 +352,150 @@ function close(id) {
   }
 }
 
+// Handle cns message
+function cnsMessage(id, client, message) {
+  // Get node id from topic
+  const topic = client.cnsTopic;
+
+  const parts = topic.split('/');
+  const nodeId = parts[1] + '/' + parts[2];
+
+  // Decode payload
+  const payload = JSON.parse(message);
+
+  // Get node?
+  const node = nodes.getNode(id);
+
+  if (node === null)
+    throw new Error('proxy node not found ' + id);
+
+  // Update changes
+  var changed = false;
+
+  // Generate profiles
+  const profiles = [];
+
+  // Keep non-proxied profiles
+  if (Array.isArray(node.profiles)) {
+    for (const profile of node.profiles) {
+      if (profile.proxy === undefined) profiles.push(profile);
+      else changed = true;
+    }
+  }
+
+  // Has profiles?
+  if (payload.profiles !== undefined) {
+    const conns = [];
+
+    // Find profiles to proxy
+    for (const profile of payload.profiles) {
+      // Get role
+      var role;
+
+      if (profile.server === nodeId) role = 'server';
+      else if (profile.client === nodeId) role = 'client';
+      else {
+        // Consider as a connection
+        conns.push(profile);
+        continue;
+      }
+
+      // Add proxy profile
+      profile[role] = id;
+
+      if (profile.proxy === undefined)
+        profile.proxy = {};
+
+      profiles.push(profile);
+
+      changed = true;
+    }
+
+    // Find connection profiles
+    for (const conn of conns) {
+      // What role?
+      const role = (conn.server !== undefined)?'server':'client';
+      const connId = conn[role];
+
+      // Hunt for proxy profile
+      for (const profile of profiles) {
+        // Matches profile?
+        if (profile.name === conn.name && profile.version === conn.version &&
+          profile[role] === undefined) {
+          // Add proxy connection
+          profile.proxy[connId] = conn.properties || {};
+          changed = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // Node changed?
+  if (!changed) return;
+
+  // Set new profiles
+  if (profiles.length > 0)
+    node.profiles = profiles;
+  else delete node.profiles;
+
+  // Connect them all
+  nodes.connect()
+  // Success
+  .then((result) => {
+    // Publish node
+    messages.publish(id, node);
+  })
+  // Failure
+  .catch((e) => {
+    error('node error: ' + e.message);
+  });
+}
+
+// Handle cns publish
+function cnsPublish(id, client, profile) {
+  // Update profile
+  const topic = client.cnsTopic;
+  const node = JSON.parse(client.cnsMessage);
+
+  // Locate profile
+  var found = false;
+
+  if (node.profiles !== undefined) {
+    // What role?
+    const role = (profile.server !== undefined)?'server':'client';
+
+    // Scan them
+    for (const scan of node.profiles) {
+      if (scan.name === profile.name && scan.version === profile.version &&
+        scan[role] !== undefined) {
+        // Set new properties
+        scan.properties = profile.properties;
+        found = true;
+      }
+    }
+  }
+
+  if (!found) return;
+
+  // Generate payload
+  const payload = JSON.stringify(node);
+
+  // Publish to proxy
+  debug('proxy pub ' + topic);
+
+  client.publish(topic, payload, {
+    retain: true
+  }, (e) => {
+    if (e) error('proxy publish error: ' + e.message);
+  });
+}
+
 // Handle padi message
-function padiMessage(id, topic, message) {
+function padiMessage(id, client, message) {
   // Get thing id from topic
+  const topic = client.cnsTopic;
+
   const parts = topic.split('/');
   const thingId = parts[1];
 
@@ -488,7 +652,7 @@ function padiConnection(id, thingId, connId, conn, results) {
 
 // Handle padi publish
 function padiPublish(id, client, profile) {
-  // Publish to proxy
+  // Update profile
   const name = profile.name;
   const role = (profile.server !== undefined)?'server':'client';
 
@@ -497,6 +661,7 @@ function padiPublish(id, client, profile) {
 
   const payload = JSON.stringify(profile.properties);
 
+  // Publish to proxy
   debug('proxy pub ' + topic);
 
   client.publish(topic, payload, {
@@ -504,16 +669,6 @@ function padiPublish(id, client, profile) {
   }, (e) => {
     if (e) error('proxy publish error: ' + e.message);
   });
-}
-
-// Handle cns message
-function cnsMessage(id, topic, message) {
-  // NYI
-}
-
-// Handle cns publish
-function cnsPublish(id, client, profile) {
-  // NYI
 }
 
 // Output a message
