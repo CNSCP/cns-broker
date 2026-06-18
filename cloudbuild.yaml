@@ -27,7 +27,7 @@ options:
 
 substitutions:
   _APP_NAME: cns-broker
-  _ARTIFACT_REGISTRY_REPO: cnscp
+  _ARTIFACT_REGISTRY_REPO: cnscp-preprod
   _ENV: staging
   _GCR_IMAGE: >-
     us-central1-docker.pkg.dev/${_GCR_PROJ}/${_ARTIFACT_REGISTRY_REPO}/${_APP_NAME}
